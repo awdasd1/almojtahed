@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # 1. Shamela AI Web Application (FastAPI + AI Engine)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shamela_web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - QDRANT_URL=http://qdrant:6333
+      - DATA_DIR=/app/data
+      - SHAMELA_INDEX_DB=/app/data/shamela_index.db
+      # Optional Hugging Face auto-download configuration
+      - HF_DATASET_REPO=${HF_DATASET_REPO:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - shamela_data:/app/data
+    depends_on:
+      - qdrant
+    networks:
+      - shamela_net
+
+  # 2. Qdrant Vector Search Engine (Official Image)
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: shamela_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage:z
+    networks:
+      - shamela_net
+
+volumes:
+  shamela_data:
+    name: shamela_data_volume
+  qdrant_storage:
+    name: shamela_qdrant_volume
+
+networks:
+  shamela_net:
+    driver: bridge

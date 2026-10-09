@@ -1,0 +1,51 @@
+# Git & Docs
+.git
+.gitignore
+.gitattributes
+README.md
+
+# Virtual Environments
+.venv
+venv
+env
+
+# Python Cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Giant Snapshots & Archives
+*.snapshot
+*.tar.gz
+*.tar
+*.zip
+*.7z
+badr.snapshot
+shamela_corpus-*.snapshot
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+shamela.db
+shamela_index.db
+
+# Qdrant Storage & Binaries
+qdrant_service/storage
+qdrant_service/snapshots
+qdrant_service/.qdrant-initialized
+qdrant_service/dist-qdrant.zip
+qdrant_db
+qdrant_bin
+
+# Models & Data
+models
+shamela4_data
+
+# OS & Logs
+.DS_Store
+*.log
+uvicorn.log
+*نسخة من*
+.tempmediaStorage

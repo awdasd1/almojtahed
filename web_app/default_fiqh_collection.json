@@ -1,0 +1,683 @@
+{
+  "name": "فقه مقارن تراثي موسع",
+  "description": "تجميعة نموذجية معتمدة للتحقيق الفقهي المقارن واستيعاب الأدلة وأسباب الخلاف وأقوال المذاهب والآثار من نصوص الشاملة.",
+  "created_at": "2026-09-26",
+  "sections": [
+    {
+      "section_name": "كتب اللغة والغريب",
+      "books": [
+        {
+          "book_id": 1462,
+          "title_ar": "لسان العرب",
+          "author": "ابن منظور",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 5826,
+          "title_ar": "معجم مقاييس اللغة",
+          "author": "ابن فارس",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 6151,
+          "title_ar": "النهاية في غريب الحديث والأثر",
+          "author": "ابن الأثير، مجد الدين أبو السعادات",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 3657,
+          "title_ar": "مشارق الأنوار على صحاح الآثار - ط عطاءات العلم",
+          "author": "القاضي عياض",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 1485,
+          "title_ar": "معجم الفروق اللغوية الحاوي لكتابي العسكري والجزائري - ط قم",
+          "author": "أبو هلال العسكري",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 2502,
+          "title_ar": "تاج العروس من جواهر القاموس",
+          "author": "مرتضى الزبيدي",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 2503,
+          "title_ar": "تهذيب اللغة",
+          "author": "الأزهري",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "اللغة الفقهية",
+      "books": [
+        {
+          "book_id": 4518,
+          "title_ar": "المصباح المنير في غريب الشرح الكبير",
+          "author": "الفيومي",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 2570,
+          "title_ar": "التعريفات",
+          "author": "الجرجاني، الشريف",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 4200,
+          "title_ar": "الزاهر في غريب ألفاظ الشافعي",
+          "author": "الأزهري",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 2509,
+          "title_ar": "تحرير ألفاظ التنبيه",
+          "author": "النووي",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 2082,
+          "title_ar": "طلبة الطلبة",
+          "author": "أبو حفص النسفي",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 3994,
+          "title_ar": "أنيس الفقهاء في تعريفات الألفاظ المتداولة بين الفقهاء",
+          "author": "قاسم القونوي",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 7242,
+          "title_ar": "شرح المطلع على متن إيساغوجي",
+          "author": "أحمد بن عمر الحازمي",
+          "category": "المنطق",
+          "selected": true
+        },
+        {
+          "book_id": 5773,
+          "title_ar": "شرح حدود ابن عرفة",
+          "author": "الرصاع",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        },
+        {
+          "book_id": 2506,
+          "title_ar": "الكليات",
+          "author": "أبو البقاء الكفوي",
+          "category": "الغريب والمعاجم",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "تفسير آيات الأحكام",
+      "books": [
+        {
+          "book_id": 6074,
+          "title_ar": "أحكام القرآن للجصاص ت قمحاوي",
+          "author": "أبو بكر الرازي الجصاص",
+          "category": "علوم القرآن وأصول التفسير",
+          "selected": true
+        },
+        {
+          "book_id": 1306,
+          "title_ar": "أحكام القرآن لابن العربي ط العلمية",
+          "author": "أبو بكر ابن العربي",
+          "category": "علوم القرآن وأصول التفسير",
+          "selected": true
+        },
+        {
+          "book_id": 6075,
+          "title_ar": "أحكام القرآن للكيا الهراسي",
+          "author": "الكيا الهراسي",
+          "category": "علوم القرآن وأصول التفسير",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "سبب الخلاف",
+      "books": [
+        {
+          "book_id": 5841,
+          "title_ar": "بداية المجتهد ونهاية المقتصد",
+          "author": "ابن رشد الحفيد",
+          "category": "الفقه المالكي",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "القواعد الفقهية والفروق",
+      "books": [
+        {
+          "book_id": 7705,
+          "title_ar": "شرح القواعد السبع من التدمرية",
+          "author": "يوسف الغفيص",
+          "category": "العقيدة",
+          "selected": true
+        },
+        {
+          "book_id": 1622,
+          "title_ar": "الفروق للقرافي = أنوار البروق في أنواء الفروق",
+          "author": "القرافي",
+          "category": "علوم الفقه والقواعد الفقهية",
+          "selected": true
+        },
+        {
+          "book_id": 5832,
+          "title_ar": "الأشباه والنظائر - السيوطي",
+          "author": "الجلال السيوطي",
+          "category": "علوم الفقه والقواعد الفقهية",
+          "selected": true
+        },
+        {
+          "book_id": 3075,
+          "title_ar": "قواعد الأحكام في مصالح الأنام",
+          "author": "عز الدين بن عبد السلام",
+          "category": "علوم الفقه والقواعد الفقهية",
+          "selected": true
+        },
+        {
+          "book_id": 1453,
+          "title_ar": "الأشباه والنظائر - ابن نجيم",
+          "author": "زين الدين ابن نجيم",
+          "category": "علوم الفقه والقواعد الفقهية",
+          "selected": true
+        },
+        {
+          "book_id": 5757,
+          "title_ar": "المنثور في القواعد الفقهية",
+          "author": "بدر الدين الزركشي",
+          "category": "علوم الفقه والقواعد الفقهية",
+          "selected": true
+        },
+        {
+          "book_id": 7705,
+          "title_ar": "شرح القواعد السبع من التدمرية",
+          "author": "يوسف الغفيص",
+          "category": "العقيدة",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "كتب أصول الفقه",
+      "books": [
+        {
+          "book_id": 2872,
+          "title_ar": "الرسالة للشافعي",
+          "author": "الشافعي",
+          "category": "أصول الفقه",
+          "selected": true
+        },
+        {
+          "book_id": 2179,
+          "title_ar": "أصول السرخسي = تمهيد الفصول في الأصول - ت الأفغاني",
+          "author": "شمس الأئمة السرخسي",
+          "category": "أصول الفقه",
+          "selected": true
+        },
+        {
+          "book_id": 2617,
+          "title_ar": "البرهان في أصول الفقه",
+          "author": "الجويني، أبو المعالي",
+          "category": "أصول الفقه",
+          "selected": true
+        },
+        {
+          "book_id": 1866,
+          "title_ar": "المستصفى",
+          "author": "أبو حامد الغزالي",
+          "category": "أصول الفقه",
+          "selected": true
+        },
+        {
+          "book_id": 4425,
+          "title_ar": "روضة الناظر وجنة المناظر - ت شعبان",
+          "author": "ابن قدامة",
+          "category": "أصول الفقه",
+          "selected": true
+        },
+        {
+          "book_id": 3794,
+          "title_ar": "الإحكام في أصول الأحكام - ابن حزم",
+          "author": "ابن حزم",
+          "category": "أصول الفقه",
+          "selected": true
+        },
+        {
+          "book_id": 4281,
+          "title_ar": "الموافقات",
+          "author": "الشاطبي الأصولي النحوي",
+          "category": "أصول الفقه",
+          "selected": true
+        },
+        {
+          "book_id": 5758,
+          "title_ar": "البحر المحيط في أصول الفقه - ط الكتبي",
+          "author": "بدر الدين الزركشي",
+          "category": "أصول الفقه",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "الإجماع والخلاف ومنهجيته",
+      "books": [
+        {
+          "book_id": 8155,
+          "title_ar": "الإشراف على مذاهب العلماء لابن المنذر",
+          "author": "ابن المنذر",
+          "category": "الفقه العام",
+          "selected": true
+        },
+        {
+          "book_id": 1380,
+          "title_ar": "الأوسط من السنن والإجماع والاختلاف - ط الفلاح",
+          "author": "ابن المنذر",
+          "category": "الفقه العام",
+          "selected": true
+        },
+        {
+          "book_id": 2143,
+          "title_ar": "اختلاف العلماء للطحاوي - اختصار الجصاص",
+          "author": "الطحاوي",
+          "category": "الفقه العام",
+          "selected": true
+        },
+        {
+          "book_id": 2645,
+          "title_ar": "اختلاف الفقهاء لابن جرير",
+          "author": "ابن جرير الطبري",
+          "category": "الفقه العام",
+          "selected": true
+        },
+        {
+          "book_id": 1669,
+          "title_ar": "اختلاف الفقهاء = اختلاف العلماء للمروزي",
+          "author": "محمد بن نصر المروزي",
+          "category": "الفقه العام",
+          "selected": true
+        },
+        {
+          "book_id": 2147,
+          "title_ar": "اختلاف الأئمة العلماء لابن هبيرة",
+          "author": "ابن هبيرة",
+          "category": "الفقه العام",
+          "selected": true
+        },
+        {
+          "book_id": 2129,
+          "title_ar": "الحجة على أهل المدينة",
+          "author": "محمد بن الحسن الشيباني",
+          "category": "الفقه الحنفي",
+          "selected": true
+        },
+        {
+          "book_id": 1446,
+          "title_ar": "الأم للشافعي - ط الفكر",
+          "author": "الشافعي",
+          "category": "الفقه الشافعي",
+          "selected": true
+        },
+        {
+          "book_id": 1749,
+          "title_ar": "رفع الملام عن الأئمة الأعلام",
+          "author": "ابن تيمية",
+          "category": "أصول الفقه",
+          "selected": true
+        },
+        {
+          "book_id": 402,
+          "title_ar": "الإنصاف في بيان أسباب الاختلاف للدهلوي",
+          "author": "ولي الله الدهلوي",
+          "category": "أصول الفقه والقواعد الفقهية",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "كتب الأحاديث",
+      "books": [
+        {
+          "book_id": 1458,
+          "title_ar": "صحيح البخاري - ط السلطانية",
+          "author": "البخاري",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 683,
+          "title_ar": "صحيح مسلم - ط التركية",
+          "author": "مسلم",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 8151,
+          "title_ar": "سنن أبي داود - ت الأرنؤوط",
+          "author": "أبو داود",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 1220,
+          "title_ar": "سنن الترمذي - ط الرسالة",
+          "author": "الترمذي",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 797,
+          "title_ar": "سنن النسائي - ط المصرية",
+          "author": "النسائي",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 8128,
+          "title_ar": "سنن ابن ماجه - ت الأرنؤوط",
+          "author": "ابن ماجه",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 6494,
+          "title_ar": "موطأ مالك - رواية يحيى - ت الأعظمي",
+          "author": "مالك بن أنس",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 6193,
+          "title_ar": "مسند أحمد - ط الرسالة",
+          "author": "أحمد بن حنبل",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 8588,
+          "title_ar": "إرواء الظمي بتراجم رجال سنن الدارمي",
+          "author": "أبو الطيب نايف المنصوري",
+          "category": "التراجم والطبقات",
+          "selected": true
+        },
+        {
+          "book_id": 8445,
+          "title_ar": "السنن الكبرى - البيهقي - ت التركي",
+          "author": "أبو بكر البيهقي",
+          "category": "كتب السنة",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "كتب التخريج والتصحيح",
+      "books": [
+        {
+          "book_id": 4276,
+          "title_ar": "نصب الراية",
+          "author": "الجمال الزيلعي",
+          "category": "التخريج والأطراف",
+          "selected": true
+        },
+        {
+          "book_id": 8201,
+          "title_ar": "التلخيص الحبير - ط أضواء السلف",
+          "author": "ابن حجر العسقلاني",
+          "category": "التخريج والأطراف",
+          "selected": true
+        },
+        {
+          "book_id": 5927,
+          "title_ar": "إرواء الغليل في تخريج أحاديث منار السبيل",
+          "author": "ناصر الدين الألباني",
+          "category": "التخريج والأطراف",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "كتب الفقه المقارن",
+      "books": [
+        {
+          "book_id": 1852,
+          "title_ar": "المبسوط للسرخسي",
+          "author": "شمس الأئمة السرخسي",
+          "category": "الفقه الحنفي",
+          "selected": true
+        },
+        {
+          "book_id": 1618,
+          "title_ar": "المجموع شرح المهذب - ط المنيرية",
+          "author": "النووي",
+          "category": "الفقه الشافعي",
+          "selected": true
+        },
+        {
+          "book_id": 2437,
+          "title_ar": "المغني لابن قدامة - ت التركي",
+          "author": "ابن قدامة",
+          "category": "الفقه الحنبلي",
+          "selected": true
+        },
+        {
+          "book_id": 1478,
+          "title_ar": "الاستذكار",
+          "author": "ابن عبد البر",
+          "category": "شروح الحديث",
+          "selected": true
+        },
+        {
+          "book_id": 738,
+          "title_ar": "المحلى بالآثار",
+          "author": "ابن حزم",
+          "category": "الفقه العام",
+          "selected": true
+        },
+        {
+          "book_id": 1380,
+          "title_ar": "الأوسط من السنن والإجماع والاختلاف - ط الفلاح",
+          "author": "ابن المنذر",
+          "category": "الفقه العام",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "كتب المذاهب",
+      "books": [
+        {
+          "book_id": 2874,
+          "title_ar": "بدائع الصنائع في ترتيب الشرائع",
+          "author": "الكاساني",
+          "category": "الفقه الحنفي",
+          "selected": true
+        },
+        {
+          "book_id": 4404,
+          "title_ar": "الهداية في شرح بداية المبتدي",
+          "author": "المرغيناني",
+          "category": "الفقه الحنفي",
+          "selected": true
+        },
+        {
+          "book_id": 3386,
+          "title_ar": "العناية شرح الهداية - بهامش فتح القدير ط الحلبي",
+          "author": "البابرتي",
+          "category": "الفقه الحنفي",
+          "selected": true
+        },
+        {
+          "book_id": 5775,
+          "title_ar": "حاشية ابن عابدين = رد المحتار - ط الحلبي",
+          "author": "ابن عابدين",
+          "category": "الفقه الحنفي",
+          "selected": true
+        },
+        {
+          "book_id": 566,
+          "title_ar": "المدونة",
+          "author": "مالك بن أنس",
+          "category": "الفقه المالكي",
+          "selected": true
+        },
+        {
+          "book_id": 1476,
+          "title_ar": "الذخيرة للقرافي",
+          "author": "القرافي",
+          "category": "الفقه المالكي",
+          "selected": true
+        },
+        {
+          "book_id": 549,
+          "title_ar": "مواهب الجليل في شرح مختصر خليل",
+          "author": "الحطاب",
+          "category": "الفقه المالكي",
+          "selected": true
+        },
+        {
+          "book_id": 2600,
+          "title_ar": "الكافي في فقه أهل المدينة",
+          "author": "ابن عبد البر",
+          "category": "الفقه المالكي",
+          "selected": true
+        },
+        {
+          "book_id": 2127,
+          "title_ar": "الحاوي الكبير",
+          "author": "الماوردي",
+          "category": "الفقه الشافعي",
+          "selected": true
+        },
+        {
+          "book_id": 3568,
+          "title_ar": "نهاية المطلب في دراية المذهب",
+          "author": "الجويني، أبو المعالي",
+          "category": "الفقه الشافعي",
+          "selected": true
+        },
+        {
+          "book_id": 480,
+          "title_ar": "روضة الطالبين وعمدة المفتين",
+          "author": "النووي",
+          "category": "الفقه الشافعي",
+          "selected": true
+        },
+        {
+          "book_id": 4288,
+          "title_ar": "مغني المحتاج إلى معرفة معاني ألفاظ المنهاج",
+          "author": "الخطيب الشربيني",
+          "category": "الفقه الشافعي",
+          "selected": true
+        },
+        {
+          "book_id": 5570,
+          "title_ar": "الإنصاف في معرفة الراجح من الخلاف - ت التركي",
+          "author": "المرداوي",
+          "category": "الفقه الحنبلي",
+          "selected": true
+        },
+        {
+          "book_id": 4453,
+          "title_ar": "الفروع وتصحيح الفروع",
+          "author": "شمس الدين ابن مفلح",
+          "category": "الفقه الحنبلي",
+          "selected": true
+        },
+        {
+          "book_id": 598,
+          "title_ar": "كشاف القناع عن متن الإقناع - ط وزارة العدل",
+          "author": "البهوتي",
+          "category": "الفقه الحنبلي",
+          "selected": true
+        },
+        {
+          "book_id": 5819,
+          "title_ar": "شرح منتهى الإرادات للبهوتي = دقائق أولي النهى ط عالم الكتب",
+          "author": "البهوتي",
+          "category": "الفقه الحنبلي",
+          "selected": true
+        }
+      ]
+    },
+    {
+      "section_name": "الآثار",
+      "books": [
+        {
+          "book_id": 315,
+          "title_ar": "المصنف - ابن أبي شيبة - ت الشثري",
+          "author": "أبو بكر بن أبي شيبة",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 3703,
+          "title_ar": "تنبيه الحذاق على بطلان ما شاع بين الأنام من حديث النور المنسوب لمصنف عبد الرزاق",
+          "author": "محمد أحمد عبد القادر الشنقيطي المدني",
+          "category": "التخريج والأطراف",
+          "selected": true
+        },
+        {
+          "book_id": 1368,
+          "title_ar": "شرح معاني الآثار - ت البهرائجى",
+          "author": "الطحاوي",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 3510,
+          "title_ar": "سنن الدارقطني",
+          "author": "الدارقطني",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 1086,
+          "title_ar": "الجوهر النقي",
+          "author": "ابن التركماني",
+          "category": "التخريج والأطراف",
+          "selected": true
+        },
+        {
+          "book_id": 1290,
+          "title_ar": "صحيح ابن خزيمة",
+          "author": "ابن خزيمة",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 518,
+          "title_ar": "صحيح ابن حبان: التقاسيم والأنواع",
+          "author": "ابن حبان",
+          "category": "كتب السنة",
+          "selected": true
+        },
+        {
+          "book_id": 1097,
+          "title_ar": "المستدرك على الصحيحين - ط المنهاج القويم",
+          "author": "أبو عبد الله الحاكم",
+          "category": "كتب السنة",
+          "selected": true
+        }
+      ]
+    }
+  ]
+}

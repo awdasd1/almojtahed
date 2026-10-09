@@ -1,0 +1,19 @@
+[
+  {
+    "id": "full_sham",
+    "name": "full_sham",
+    "title": "كامل الشاملة",
+    "icon": "💎",
+    "category": "كل التصنيفات",
+    "topic": "حرر المسائل الفقهية تحريرا مفصلا مستوف لكافة الكتب",
+    "description": "يجب استدعاء هذه الأداة عند البحث عن أي مسألة",
+    "engine_type": "custom_python",
+    "category_id": null,
+    "book_titles": [],
+    "default_limit": 1000,
+    "max_limit": 1000,
+    "enabled": true,
+    "is_custom": true,
+    "python_code": "# كود بايثون لتنفيذ الأداة المخصصة\nres = search_shamela_text(query=query, category_id=category_id, book_titles=book_titles, limit=limit)\nreturn res"
+  }
+]

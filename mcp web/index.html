@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="claude-warm">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Desktop Web — كلاود ديستوب</title>
+  
+  <!-- Google Fonts: Amiri, Cairo, Tajawal, IBM Plex Sans Arabic, Readex Pro, Almarai, Inter, Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Almarai:wght@300;400;700;800&family=Cairo:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Readex+Pro:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Markdown & Code Highlight & PDF Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- html2pdf for high quality PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="style.css?v=8">
+</head>
+<body>
+  <div class="app-layout" id="appLayout">
+    
+    <!-- Collapsible Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-logo">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/>
+            </svg>
+          </div>
+          <div class="brand-info">
+            <span class="brand-name">Claude</span>
+            <span class="brand-badge">Desktop Web</span>
+          </div>
+        </div>
+        <button class="icon-btn btn-collapse" id="collapseSidebarBtn" title="طي القائمة الجانبية">
+          <i data-lucide="panel-left-close"></i>
+        </button>
+      </div>
+
+      <!-- New Chat Action -->
+      <div class="sidebar-actions">
+        <button class="btn btn-new-chat" id="newChatBtn">
+          <i data-lucide="plus"></i>
+          <span>محادثة جديدة</span>
+          <span class="chat-shortcut">⌘K</span>
+        </button>
+      </div>
+
+      <!-- Search in conversations -->
+      <div class="sidebar-search">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="chatSearchInput" placeholder="بحث في المحادثات..." autocomplete="off">
+      </div>
+
+      <!-- Saved Chats List -->
+      <div class="sidebar-history-container">
+        <div class="history-label">المحادثات السابقة</div>
+        <ul class="chat-list" id="chatList">
+          <!-- Dynamically populated -->
+        </ul>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="user-pill">
+          <div class="user-avatar">
+            <span>U</span>
+          </div>
+          <div class="user-details">
+            <div class="user-title" id="currentModelDisplay">Claude 3.7 Sonnet</div>
+            <div class="user-sub" id="currentProviderDisplay">Anthropic</div>
+          </div>
+        </div>
+        <div class="footer-actions">
+          <button class="icon-btn" id="themeToggleBtn" title="تبديل النمط الفاتح / الداكن">
+            <i data-lucide="sun" id="themeIcon"></i>
+          </button>
+          <button class="icon-btn" id="openSettingsBtn" title="الإعدادات الشاملة">
+            <i data-lucide="settings"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat View Area -->
+    <main class="main-content">
+      <!-- Chat View Top Header Bar -->
+      <header class="chat-header">
+        <div class="header-left">
+          <button class="icon-btn btn-expand" id="expandSidebarBtn" title="فتح القائمة">
+            <i data-lucide="panel-left-open"></i>
+          </button>
+          <div class="chat-title-group">
+            <div class="chat-id-badge" id="chatIdBadge" title="انقر لنسخ رقم المحادثة">
+              <i data-lucide="hash"></i>
+              <span id="currentChatIdText">CHAT-NEW</span>
+            </div>
+            <h1 class="chat-current-title" id="currentChatTitle">محادثة جديدة</h1>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Quick Bridge to Control Panel -->
+          <a href="http://localhost:8000" target="_blank" class="tool-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 5px; color: var(--claude-text-secondary);" title="فتح لوحة تحكم الشاملة والفهارس">
+            <i data-lucide="layout-dashboard"></i>
+            <span>لوحة التحكم ↗</span>
+          </a>
+
+          <!-- Quick Export Buttons in Header -->
+          <div class="header-tools">
+            <button class="tool-btn" id="exportChatCsvBtn" title="تصدير جداول المحادثة كملف CSV">
+              <i data-lucide="sheet"></i>
+              <span>تصدير CSV</span>
+            </button>
+            <button class="tool-btn" id="exportChatPdfBtn" title="تصدير المحادثة كاملة كملف PDF">
+              <i data-lucide="file-text"></i>
+              <span>تصدير PDF</span>
+            </button>
+            <button class="tool-btn danger" id="clearChatBtn" title="مسح رسائل هذه المحادثة">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+
+          <!-- Model Pill Indicator -->
+          <div class="model-indicator-pill" id="headerModelPill" title="الموديل النشط - اضغط للتغيير">
+            <span class="status-dot"></span>
+            <span class="model-name-label" id="headerModelName">Claude 3.7 Sonnet</span>
+            <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+          </div>
+        </div>
+      </header>
+
+      <!-- Chat Messages Container -->
+      <div class="messages-container" id="messagesContainer">
+        <!-- Welcome Screen (shown when conversation is empty) -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="claude-flower-icon">
+            <svg viewBox="0 0 100 100" width="68" height="68">
+              <circle cx="50" cy="50" r="46" fill="var(--claude-coral)" opacity="0.12"/>
+              <path d="M50 18 C50 35, 65 50, 82 50 C65 50, 50 65, 50 82 C50 65, 35 50, 18 50 C35 50, 50 35, 50 18 Z" fill="var(--claude-coral)"/>
+            </svg>
+          </div>
+          <h2 class="welcome-heading">مرحباً بك في واجهة Claude Desktop</h2>
+          <p class="welcome-sub">بيئة دردشة ذكية متطورة مستوحاة من كلود ديستوب، تدعم النماذج المتعددة، بروتوكول MCP، وتصدير الجداول إلى CSV والتقارير إلى PDF.</p>
+          
+          <div class="starter-cards">
+            <div class="starter-card" data-prompt="أنشئ لي جدولاً مفصلاً للمقارنة بين نماذج Claude و OpenAI و Google من حيث التكلفة، السرعة، وميزات MCP مع أمثلة.">
+              <div class="starter-card-icon"><i data-lucide="table"></i></div>
+              <div class="starter-card-title">مقارنة نماذج الذكاء الاصطناعي في جدول</div>
+              <div class="starter-card-desc">جدول مفصل يدعم التصدير المباشر لـ CSV</div>
+            </div>
+            <div class="starter-card" data-prompt="اشرح لي بروتوكول MCP (Model Context Protocol) وكيف يعمل مع الذكاء الاصطناعي مع كود JSON تجريبي لتكوينه.">
+              <div class="starter-card-icon"><i data-lucide="cpu"></i></div>
+              <div class="starter-card-title">ما هو بروتوكول MCP؟</div>
+              <div class="starter-card-desc">شرح عملي مع إعداد خادم ومخطط JSON</div>
+            </div>
+            <div class="starter-card" data-prompt="قم بصياغة تقرير تنفيذي منسق حول استراتيجيات توظيف أدوات الذكاء الاصطناعي في الأعمال لعام 2026، مع عناوين ونقاط جاهزة للتحويل إلى PDF.">
+              <div class="starter-card-icon"><i data-lucide="file-check"></i></div>
+              <div class="starter-card-title">تقرير تنفيذي منسق لـ PDF</div>
+              <div class="starter-card-desc">تحويل الإجابة المكتملة إلى مستند PDF بضغطة زر</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Stream will append here -->
+        <div class="messages-list" id="messagesList"></div>
+      </div>
+
+      <!-- Chat Input Area (Claude Desktop Capsule) -->
+      <div class="chat-input-wrapper">
+        <div class="chat-input-capsule" id="chatInputCapsule">
+          <div class="input-context-bar" id="inputContextBar" style="display: none;">
+            <div class="context-tag" id="contextTag">
+              <i data-lucide="file-code" style="width: 13px;"></i>
+              <span id="contextTagName">ملف مرفق</span>
+              <button class="context-remove" id="removeContextBtn">&times;</button>
+            </div>
+          </div>
+          
+          <textarea 
+            id="chatTextarea" 
+            placeholder="اسأل كلود أي شيء، أو الصق بيانات لإنشاء جداول..." 
+            rows="1"
+            dir="auto"
+          ></textarea>
+
+          <div class="input-controls">
+            <div class="controls-left">
+              <label class="control-btn" title="إرفاق ملف أو نص">
+                <i data-lucide="paperclip"></i>
+                <input type="file" id="fileAttachmentInput" style="display:none;" accept=".txt,.json,.csv,.md,.py,.js,.html">
+              </label>
+
+              <!-- زر ديناميكي لـ RAG الوكلاء المساعدين الشاملة -->
+              <div class="capsule-pill-wrapper">
+                <button type="button" class="control-btn active" id="ragAgentsToggle" title="RAG نصوص الشاملة والوكلاء المساعدين">
+                  <i data-lucide="sparkles"></i>
+                  <span class="pill-text" id="ragAgentPillText">RAG: الشاطبي (الأصولي)</span>
+                  <i data-lucide="chevron-down" style="width: 12px; height: 12px; opacity: 0.6; margin-right: 2px;"></i>
+                </button>
+                <div class="capsule-popover" id="ragAgentPopover" style="display: none;">
+                  <div class="capsule-popover-header">
+                    <span>⚡ الوكلاء المساعدون ومحرك RAG</span>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span id="ragAgentCountTag" style="font-size: 10px; background: rgba(218, 119, 86, 0.15); color: #DA7756; padding: 1px 7px; border-radius: 9999px; font-weight: 700;">جلسة نشطة</span>
+                      <button type="button" onclick="event.stopPropagation(); loadShamelaAgentsForRag(false);" title="تحديث قائمة الوكلاء فورياً" style="background: none; border: none; cursor: pointer; color: var(--claude-text-muted); padding: 2px; display: flex; align-items: center;">
+                        <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div id="ragAgentsListContainer" style="display: flex; flex-direction: column; gap: 3px; max-height: 340px; overflow-y: auto;">
+                    <!-- يتم بناؤه وتحديثه ديناميكياً من وكلاء الجلسة في لوحة التحكم -->
+                  </div>
+                  <div style="border-top: 1.5px solid #E2E8F0; margin: 4px 0;"></div>
+                  <div class="capsule-popover-item" id="ragToggleStateBtn" onclick="toggleRagState()" style="color: var(--accent-color); font-weight: 700;">
+                    <span>🔘 تفعيل محرك RAG الموثق</span>
+                    <span id="ragStatusLabel" style="font-size: 11px; font-weight: 700;">مفعل</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- زر ديناميكي لخوادم MCP (الشاملة المحلي / خزانة المعارف الخارجي) -->
+              <div class="capsule-pill-wrapper">
+                <button type="button" class="control-btn" id="mcpActiveIndicator" title="خوادم أدوات MCP">
+                  <i data-lucide="cable"></i>
+                  <span class="pill-text" id="mcpPillText">MCP: الشاملة</span>
+                  <span class="mcp-count-badge" id="mcpCountBadge">20</span>
+                  <i data-lucide="chevron-down" style="width: 12px; height: 12px; opacity: 0.6; margin-right: 2px;"></i>
+                </button>
+                <div class="capsule-popover" id="mcpServerPopover" style="display: none; width: 350px;">
+                  <div class="capsule-popover-header">
+                    <span>🔌 خوادم بروتوكول MCP</span>
+                    <span style="font-size: 10px; font-weight: normal; color: var(--claude-text-muted);">تحكم فوري</span>
+                  </div>
+                  <div class="capsule-popover-item active" id="mcpOptShamela" onclick="switchActiveMcp('shamela-scholarly', 'الشاملة (محلي)')">
+                    <span>🏛️ المكتبة الشاملة (20 أداة محلية)</span>
+                    <span style="font-size: 10px; background: rgba(56, 189, 248, 0.18); color: #38bdf8; padding: 1px 5px; border-radius: 4px;">محلي</span>
+                  </div>
+                  <div class="capsule-popover-item" id="mcpOptKhizana" onclick="switchActiveMcp('khizanat-almaarif', 'خزانة المعارف (خارجي)')">
+                    <span>🌐 خزانة المعارف (93 أداة سحابية)</span>
+                    <span style="font-size: 10px; background: rgba(168, 85, 247, 0.18); color: #c084fc; padding: 1px 5px; border-radius: 4px;">خارجي</span>
+                  </div>
+
+                  <!-- خيارات مرونة عمق الاستخراج وتنويع أمهات الكتب وتوسيع السياق -->
+                  <div style="border-top: 1px solid var(--claude-border); margin: 6px 0 4px;"></div>
+                  <div class="mcp-quick-settings-box" style="padding: 8px 10px; background: rgba(0, 0, 0, 0.025); border: 1px solid var(--claude-border); border-radius: 8px;">
+                    <div style="font-size: 11.5px; font-weight: 700; color: var(--claude-text-primary); margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between;">
+                      <span style="display: flex; align-items: center; gap: 4px;">⚡ عمق الاستخراج والبحث الذكي</span>
+                      <span style="font-size: 10px; background: rgba(218, 119, 86, 0.15); color: var(--accent-color); padding: 1px 6px; border-radius: 4px; font-weight: 600;">مرونة تامة</span>
+                    </div>
+
+                    <!-- 1. سقف استخراج النصوص (قائمة منسدلة إلى 50) -->
+                    <div style="margin-bottom: 7px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 3px;">
+                        <span style="font-weight: 600; color: var(--claude-text-secondary);">سقف استخراج النصوص:</span>
+                        <span id="mcpLimitPopoverBadge" style="font-size: 10.5px; font-weight: 700; color: var(--accent-color);">15 نصاً</span>
+                      </div>
+                      <select id="mcpLimitSelectPopover" class="form-select" style="font-size: 11.5px; padding: 3px 8px; height: 30px; width: 100%;">
+                        <option value="6">6 نصوص (سريع وموجز)</option>
+                        <option value="10">10 نصوص (تحرير قياسي)</option>
+                        <option value="15" selected>15 نصاً (موصى به: متوازن وعميق)</option>
+                        <option value="20">20 نصاً (مقارنة فقهية موسعة)</option>
+                        <option value="30">30 نصاً (استقصاء شامل للأقوال)</option>
+                        <option value="50">50 نصاً (أقصى سقف استيعابي)</option>
+                      </select>
+                    </div>
+
+                    <!-- 2. خيار تنويع أمهات الكتب (Book Diversity Re-ranking) -->
+                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; cursor: pointer; padding: 5px 0; border-top: 1px dashed var(--claude-border);">
+                      <div style="display: flex; flex-direction: column; text-align: right; padding-left: 6px;">
+                        <span style="font-weight: 600; color: var(--claude-text-primary);">تنويع أمهات الكتب</span>
+                        <span style="font-size: 9.5px; color: var(--claude-text-muted);">Book Diversity (منع استئثار كتاب واحد)</span>
+                      </div>
+                      <input type="checkbox" id="mcpBookDiversityTogglePopover" checked style="width: 15px; height: 15px; accent-color: var(--accent-color); cursor: pointer;">
+                    </label>
+
+                    <!-- 3. خيار توسيع سياق الصفحة والمبحث (Window Expansion) -->
+                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; cursor: pointer; padding: 5px 0 2px; border-top: 1px dashed var(--claude-border); margin-top: 2px;">
+                      <div style="display: flex; flex-direction: column; text-align: right; padding-left: 6px;">
+                        <span style="font-weight: 600; color: var(--claude-text-primary);">توسيع سياق الصفحة</span>
+                        <span style="font-size: 9.5px; color: var(--claude-text-muted);">Window Expansion (ربط السابق واللاحق)</span>
+                      </div>
+                      <input type="checkbox" id="mcpWindowExpansionTogglePopover" checked style="width: 15px; height: 15px; accent-color: var(--accent-color); cursor: pointer;">
+                    </label>
+                  </div>
+
+                  <div style="border-top: 1px solid var(--claude-border); margin: 4px 0 2px;"></div>
+                  <div class="capsule-popover-item" onclick="openSettings('mcpTab')">
+                    <span>⚙️ إدارة وتكوين الخوادم...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="controls-right">
+              <div class="token-estimate" id="tokenEstimate">0 كلمة</div>
+              <button class="send-btn" id="sendBtn" title="إرسال (Enter)">
+                <i data-lucide="arrow-up" id="sendIcon"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="input-footnote">
+          يمكن لكلود وذكاء الآلة ارتكاب أخطاء، تأكد دائماً من المعلومات المهمة. (Enter للإرسال، Shift+Enter لسطر جديد)
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Settings Modal (نافذة الإعدادات الشاملة) -->
+  <div class="modal-backdrop" id="settingsModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <i data-lucide="sliders-horizontal" class="modal-title-icon"></i>
+          <h3>إعدادات المنصة</h3>
+        </div>
+        <button class="icon-btn close-modal-btn" id="closeSettingsBtn" title="إغلاق">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <!-- Settings Tabs -->
+      <div class="settings-tabs">
+        <button class="tab-btn active" data-tab="providersTab">
+          <i data-lucide="cpu"></i>
+          <span>مزود الخدمة والنماذج</span>
+        </button>
+        <button class="tab-btn" data-tab="mcpTab">
+          <i data-lucide="cable"></i>
+          <span>بروتوكول MCP</span>
+        </button>
+        <button class="tab-btn" data-tab="appearanceTab">
+          <i data-lucide="palette"></i>
+          <span>المظهر والخطوط والألوان</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- TAB 1: AI Providers & Models -->
+        <div class="tab-pane active" id="providersTab">
+          <div class="setting-group">
+            <label class="setting-label">مزود الخدمة (Provider)</label>
+            <p class="setting-desc">اختر مزود الذكاء الاصطناعي الذي ترغب بالربط معه</p>
+            <div class="provider-cards-grid">
+              <div class="provider-radio-card active" data-provider="anthropic">
+                <div class="provider-radio-dot"></div>
+                <div class="provider-icon anthropic-icon">C</div>
+                <div class="provider-card-info">
+                  <div class="provider-card-name">Claude (Anthropic)</div>
+                  <div class="provider-card-sub">Claude 3.7 / 3.5 Sonnet & Haiku</div>
+                </div>
+              </div>
+              <div class="provider-radio-card" data-provider="openai">
+                <div class="provider-radio-dot"></div>
+                <div class="provider-icon openai-icon">O</div>
+                <div class="provider-card-info">
+                  <div class="provider-card-name">OpenAI (أوبن أي اي)</div>
+                  <div class="provider-card-sub">GPT-4o, o3-mini, o1, GPT-4o-mini</div>
+                </div>
+              </div>
+              <div class="provider-radio-card" data-provider="google">
+                <div class="provider-radio-dot"></div>
+                <div class="provider-icon google-icon">G</div>
+                <div class="provider-card-info">
+                  <div class="provider-card-name">Google Gemini (جوجل)</div>
+                  <div class="provider-card-sub">Gemini 2.5 Flash, 1.5 Pro & Flash</div>
+                </div>
+              </div>
+              <div class="provider-radio-card" data-provider="openrouter">
+                <div class="provider-radio-dot"></div>
+                <div class="provider-icon openrouter-icon">R</div>
+                <div class="provider-card-info">
+                  <div class="provider-card-name">OpenRouter (أوبن راوتر)</div>
+                  <div class="provider-card-sub">جميع النماذج: DeepSeek, Llama 3, وغيرهم</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <div class="label-with-action">
+              <label class="setting-label" for="apiKeyInput">مفتاح API الخاص بالمزود (API Key)</label>
+              <span class="label-badge" id="keyValidationBadge">يحفظ محلياً في متصفحك</span>
+            </div>
+            <div class="input-with-icon">
+              <input type="password" id="apiKeyInput" placeholder="sk-ant-... أو sk-... أو AIzaSy...">
+              <button class="toggle-password-btn" id="toggleApiKeyVisibility" title="إظهار / إخفاء المفتاح">
+                <i data-lucide="eye" id="apiKeyEyeIcon"></i>
+              </button>
+            </div>
+            <p class="setting-hint">لا يتم إرسال مفتاحك إلى أي خادم وسيط؛ يتم التخاطب مباشرة مع المزود المختار.</p>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-group" style="flex: 2;">
+              <div class="label-with-action">
+                <label class="setting-label" for="modelSelect">قائمة نماذج المزود المختار (<span id="modelsCountBadge">جاري التحميل...</span>)</label>
+                <button type="button" class="btn-micro" id="refreshModelsBtn" title="تحديث وجلب أحدث النماذج من المزود">
+                  <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i>
+                  <span>تحديث النماذج</span>
+                </button>
+              </div>
+              <input type="text" id="modelSearchInput" class="form-input" placeholder="🔍 اكتب للبحث في النماذج (مثال: deepseek, claude, gpt, llama, gemini, qwen)..." style="margin-bottom: 6px;">
+              <select id="modelSelect" class="form-select" size="6" style="height: 140px;">
+                <!-- Dynamically filled with 460+ models based on provider and search -->
+              </select>
+            </div>
+            <div class="setting-group" style="flex: 1;">
+              <label class="setting-label" for="temperatureInput">درجة الإبداع (Temperature)</label>
+              <div class="slider-box">
+                <input type="range" id="temperatureInput" min="0" max="1" step="0.05" value="0.7">
+                <span id="tempValueDisplay">0.7</span>
+              </div>
+              <div style="margin-top: 10px;">
+                <label class="setting-label">تفعيل أدوات MCP في المحادثة</label>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                  <input type="checkbox" id="enableMcpCheckbox" checked style="width: 16px; height: 16px; accent-color: var(--accent-color);">
+                  <span style="font-size: 12.5px; color: var(--claude-text-secondary);">استدعاء أدوات خادم MCP تلقائياً عند الحاجة</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="systemPromptInput">التعليمات النظامية (System Prompt)</label>
+            <textarea id="systemPromptInput" rows="2" class="form-textarea" placeholder="أنت مساعد ذكي فائق الاحترافية، دقيق، تجيب باللغة العربية بأسلوب راقٍ وتستخدم الجداول عند المقارنة..."></textarea>
+          </div>
+        </div>
+
+        <!-- TAB 2: Model Context Protocol (MCP) -->
+        <div class="tab-pane" id="mcpTab">
+          <div class="mcp-intro-box">
+            <div class="mcp-intro-title">
+              <i data-lucide="info"></i>
+              <span>ما هو بروتوكول MCP (Model Context Protocol)؟</span>
+            </div>
+          <div class="mcp-form-card" style="margin-bottom: 16px; border: 1.5px solid var(--claude-border);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <h4 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14.5px;">
+                <i data-lucide="compass" style="width: 18px; height: 18px; color: var(--accent-color);"></i>
+                <span>خيارات عمق البحث واستخراج النصوص من الشاملة (MCP Retrieval Depth)</span>
+              </h4>
+              <span class="label-badge" style="background: rgba(34, 197, 94, 0.15); color: #16a34a; font-weight: 700;">تحكم مباشر</span>
+            </div>
+            <p style="font-size: 12.5px; color: var(--claude-text-secondary); margin-bottom: 14px; line-height: 1.6;">
+              تتيح لك هذه الخيارات ضبط سقف الاستخراج وتوزيع النتائج على أمهات كتب المذاهب وتوسيع سياق الصفحات لمنع بتر المسائل العلمية.
+            </p>
+
+            <div class="setting-row">
+              <!-- سقف استخراج النصوص -->
+              <div class="setting-group" style="flex: 1.3;">
+                <label class="setting-label" for="mcpLimitSelectModal">سقف استخراج النصوص (Text Extraction Ceiling)</label>
+                <select id="mcpLimitSelectModal" class="form-select">
+                  <option value="6">6 نصوص (سريع وموجز)</option>
+                  <option value="10">10 نصوص (تحرير قياسي)</option>
+                  <option value="15" selected>15 نصاً (موصى به: متوازن وعميق)</option>
+                  <option value="20">20 نصاً (مقارنة فقهية موسعة عبر المذاهب)</option>
+                  <option value="30">30 نصاً (استقصاء شامل للأقوال والأدلة)</option>
+                  <option value="50">50 نصاً (أقصى سقف استيعابي للمسألة)</option>
+                </select>
+                <span style="font-size: 11px; color: var(--claude-text-muted); margin-top: 5px; display: block;">
+                  يحدد الحد الأقصى للنصوص التوثيقية المسندة التي يتم تزويد النموذج بها من خادم الشاملة.
+                </span>
+              </div>
+
+              <!-- تنويع أمهات الكتب وتوسيع السياق -->
+              <div class="setting-group" style="flex: 2; display: flex; flex-direction: column; gap: 8px;">
+                <label class="setting-label">خوارزميات ضبط جودة وعمق الاستخراج</label>
+                
+                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: var(--claude-sidebar-bg); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--claude-border);">
+                  <input type="checkbox" id="mcpBookDiversityToggleModal" checked style="width: 17px; height: 17px; accent-color: var(--accent-color); margin-top: 2px; cursor: pointer;">
+                  <div>
+                    <div style="font-size: 12.5px; font-weight: 600; color: var(--claude-text-primary);">تنويع أمهات الكتب (Book Diversity Re-ranking)</div>
+                    <div style="font-size: 11px; color: var(--claude-text-muted);">
+                      يمنع استئثار كتاب واحد بمعظم النتائج، ويوزع الاستخراج بالتساوي على مختلف أمهات كتب الفقه والحديث والتفسير.
+                    </div>
+                  </div>
+                </label>
+
+                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: var(--claude-sidebar-bg); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--claude-border);">
+                  <input type="checkbox" id="mcpWindowExpansionToggleModal" checked style="width: 17px; height: 17px; accent-color: var(--accent-color); margin-top: 2px; cursor: pointer;">
+                  <div>
+                    <div style="font-size: 12.5px; font-weight: 600; color: var(--claude-text-primary);">توسيع سياق الصفحة والمبحث (Window Expansion)</div>
+                    <div style="font-size: 11px; color: var(--claude-text-muted);">
+                      يقوم بربط الصفحة الحالية بالصفحة السابقة واللاحقة آلياً، لضمان استيعاب صدر المسألة وأدلتها ومناقشتها كاملة.
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mcp-form-card">
+            <h4>إضافة أو تعديل خادم MCP</h4>
+            <div class="setting-row">
+              <div class="setting-group" style="flex: 2;">
+                <label class="setting-label" for="mcpServerTitle">عنوان خادم MCP (Server Name)</label>
+                <input type="text" id="mcpServerTitle" class="form-input" placeholder="مثلاً: SQLite Database أو Filesystem Tools">
+              </div>
+              <div class="setting-group" style="flex: 1;">
+                <label class="setting-label" for="mcpServerType">نوع الاتصال</label>
+                <select id="mcpServerType" class="form-select">
+                  <option value="sse">رابط عن بعد (Remote URL / SSE / HTTP)</option>
+                  <option value="stdio">أمر تشغيل محلي (Stdio / Command)</option>
+                  <option value="websocket">WebSocket</option>
+                  <option value="builtin">Built-in Emulated</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-group">
+              <div class="label-with-action">
+                <label class="setting-label" for="mcpJsonConfig">كود MCP بهيئة JSON أو رابط URL مباشر</label>
+                <div class="template-btns">
+                  <button type="button" class="btn-micro" id="loadKhizanaTemplate" style="background: var(--claude-coral-subtle); color: var(--accent-color); font-weight: 700;">★ قالب خزانة المعارف (URL)</button>
+                  <button type="button" class="btn-micro" id="loadShamelaTemplate">قالب الشاملة المحلي</button>
+                  <button type="button" class="btn-micro" id="loadFilesystemTemplate">قالب Filesystem</button>
+                  <button type="button" class="btn-micro" id="loadSqliteTemplate">قالب SQLite</button>
+                  <button type="button" class="btn-micro" id="loadFetchTemplate">قالب Web Fetch</button>
+                  <button type="button" class="btn-micro" id="formatMcpJsonBtn">تنسيق JSON</button>
+                </div>
+              </div>
+              <textarea id="mcpJsonConfig" rows="7" class="form-textarea code-font" placeholder='{
+  "mcpServers": {
+    "khizanat-almaarif": {
+      "url": "https://mcp.khizanat-almaarif.com/mcp"
+    }
+  }
+}
+أو الصق الرابط مباشرة: https://mcp.khizanat-almaarif.com/mcp'></textarea>
+              <div id="mcpJsonStatus" class="json-status-msg"></div>
+            </div>
+
+            <button class="btn btn-primary" id="saveMcpServerBtn">
+              <i data-lucide="plus-circle"></i>
+              <span>حفظ خادم MCP والاتصال به فوراً</span>
+            </button>
+          </div>
+
+          <div class="mcp-servers-list-section">
+            <div class="label-with-action">
+              <h4 class="section-title">خوادم وأدوات MCP النشطة والمتاحة</h4>
+              <span class="label-badge" id="mcpLiveStatusBadge">جاهز للاتصال</span>
+            </div>
+            <div class="mcp-servers-grid" id="mcpServersGrid">
+              <!-- Dynamically populated MCP servers -->
+            </div>
+            <div id="mcpToolsViewer" style="margin-top: 14px; background: var(--claude-sidebar-bg); border: 1px solid var(--claude-border); border-radius: 8px; padding: 12px; display: none;">
+              <div style="font-size: 13px; font-weight: 700; color: var(--claude-text-primary); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <span>الأدوات المكتشفة من خادم MCP (<span id="discoveredToolsCount">0</span> أداة)</span>
+                <span style="font-size: 11px; color: var(--accent-color);">متاحة ومربوطة بالنماذج تلقائياً</span>
+              </div>
+              <div id="discoveredToolsList" style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: Appearance, Fonts & Colors -->
+        <div class="tab-pane" id="appearanceTab">
+          <!-- Theme Palettes -->
+          <div class="setting-group">
+            <label class="setting-label">ألوان الثيم ونظام الألوان</label>
+            <p class="setting-desc">اختر من لوحات ألوان كلود الفاتحة الدافئة أو الأنظمة الحديثة</p>
+            <div class="theme-palette-grid">
+              <div class="theme-card active" data-theme-id="claude-warm">
+                <div class="theme-preview claude-warm-preview">
+                  <span class="preview-dot p1"></span>
+                  <span class="preview-dot p2"></span>
+                  <span class="preview-dot p3"></span>
+                </div>
+                <div class="theme-card-label">كلود الرملي الدافئ (الأصلي)</div>
+              </div>
+
+              <div class="theme-card" data-theme-id="claude-dark">
+                <div class="theme-preview claude-dark-preview">
+                  <span class="preview-dot p1"></span>
+                  <span class="preview-dot p2"></span>
+                  <span class="preview-dot p3"></span>
+                </div>
+                <div class="theme-card-label">كلود الليلي الفاخر (Dark Obsidian)</div>
+              </div>
+
+              <div class="theme-card" data-theme-id="nordic-frost">
+                <div class="theme-preview nordic-preview">
+                  <span class="preview-dot p1"></span>
+                  <span class="preview-dot p2"></span>
+                  <span class="preview-dot p3"></span>
+                </div>
+                <div class="theme-card-label">الصقيع الإسكندنافي (Nordic Light)</div>
+              </div>
+
+              <div class="theme-card" data-theme-id="emerald-sage">
+                <div class="theme-preview sage-preview">
+                  <span class="preview-dot p1"></span>
+                  <span class="preview-dot p2"></span>
+                  <span class="preview-dot p3"></span>
+                </div>
+                <div class="theme-card-label">المريمية الهادئة (Emerald Sage)</div>
+              </div>
+
+              <div class="theme-card" data-theme-id="royal-purple">
+                <div class="theme-preview royal-preview">
+                  <span class="preview-dot p1"></span>
+                  <span class="preview-dot p2"></span>
+                  <span class="preview-dot p3"></span>
+                </div>
+                <div class="theme-card-label">الأرجواني الملكي (Amethyst)</div>
+              </div>
+
+              <div class="theme-card" data-theme-id="pure-paper">
+                <div class="theme-preview paper-preview">
+                  <span class="preview-dot p1"></span>
+                  <span class="preview-dot p2"></span>
+                  <span class="preview-dot p3"></span>
+                </div>
+                <div class="theme-card-label">الورق الكلاسيكي الأبيض (Pure White)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Font Customization -->
+          <div class="setting-row">
+            <div class="setting-group" style="flex: 1;">
+              <label class="setting-label" for="fontFamilySelect">خط المحادثة والواجهة (خطوط جوجل)</label>
+              <select id="fontFamilySelect" class="form-select">
+                <option value="'Amiri', 'Traditional Arabic', serif">Amiri (الخط الأميري التراثي للأبحاث الأصولية)</option>
+                <option value="'Cairo', sans-serif">Cairo (القاهرة - أنيق وواضح)</option>
+                <option value="'Noto Naskh Arabic', serif">Noto Naskh Arabic (خط النسخ التراثي)</option>
+                <option value="'Tajawal', sans-serif">Tajawal (تجوّل - سلس وعصري)</option>
+                <option value="'IBM Plex Sans Arabic', sans-serif">IBM Plex Sans Arabic (تقني احترافي)</option>
+                <option value="'Almarai', sans-serif">Almarai (المراعي - متوازن ومريح)</option>
+                <option value="'Readex Pro', sans-serif">Readex Pro (ريدكس برو - هندسي ناعم)</option>
+                <option value="'Outfit', sans-serif">Outfit (عصري لاتيني وعربي)</option>
+                <option value="'Inter', sans-serif">Inter (العالمي الحديث)</option>
+              </select>
+            </div>
+            
+            <div class="setting-group" style="flex: 1;">
+              <label class="setting-label" for="fontSizeSlider">
+                حجم الخط (<span id="fontSizeDisplay">15px</span>)
+              </label>
+              <div class="slider-box">
+                <input type="range" id="fontSizeSlider" min="13" max="22" step="1" value="15">
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-group" style="flex: 1;">
+              <label class="setting-label" for="fontColorPicker">لون خط المحادثة الأساسي</label>
+              <div class="color-picker-box">
+                <input type="color" id="fontColorPicker" value="#201f1d">
+                <span class="color-hex-text" id="fontColorHex">#201f1d</span>
+                <button type="button" class="btn-micro" id="resetFontColorBtn">استعادة الافتراضي</button>
+              </div>
+            </div>
+
+            <div class="setting-group" style="flex: 1;">
+              <label class="setting-label" for="accentColorPicker">اللون الرئيسي للتمييز (Accent Color)</label>
+              <div class="color-picker-box">
+                <input type="color" id="accentColorPicker" value="#da7756">
+                <span class="color-hex-text" id="accentColorHex">#da7756</span>
+                <button type="button" class="btn-micro" id="resetAccentColorBtn">استعادة لون كلود</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Font & Style Preview Box -->
+          <div class="preview-sample-box" id="previewSampleBox">
+            <div class="sample-title">معاينة مباشرة للخط والمظهر المختار:</div>
+            <div class="sample-body">
+              «أهلاً بك! يتم تطبيق حجم ولون الخط المختار فوراً على جميع رسائل الدردشة، القوائم الجانبية، والجداول المصممة بدقة لتوفير أفضل تجربة قراءة.»
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="resetSettingsDefaultsBtn">استعادة الإعدادات الافتراضية</button>
+        <button class="btn btn-primary" id="saveSettingsBtn">حفظ وتطبيق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Designer & Template Customizer Modal -->
+  <div class="modal-backdrop" id="pdfDesignerModal" style="display: none; z-index: 9999;">
+    <div class="modal-dialog pdf-designer-container">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="file-text" style="color: var(--accent-color);"></i>
+          <span>مصمم قوالب ملفات PDF الموثقة والمعاينة الحية</span>
+        </div>
+        <button class="icon-btn" id="closePdfDesignerBtn" title="إغلاق">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="pdf-designer-body">
+        <!-- Live Preview Area (A4 Sheet Simulation) -->
+        <div class="pdf-preview-pane">
+          <div class="pdf-preview-toolbar">
+            <span class="preview-badge">معاينة الورقة الحية (A4 Sheet Preview)</span>
+            <div class="preview-scale-info">حجم A4 قياسي مع محاذاة وتنسيق عربي دقيق</div>
+          </div>
+          <div class="pdf-sheet-scroller">
+            <div class="pdf-sheet" id="pdfLiveSheet">
+              <!-- Live compiled content rendered here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls & Template Customizer Sidebar -->
+        <div class="pdf-controls-pane">
+          <!-- Preset Templates -->
+          <div class="designer-section">
+            <label class="setting-label">اختر قالباً جاهزاً (Design Template):</label>
+            <div class="template-selector-grid">
+              <button type="button" class="template-chip active" data-preset="scholarly">
+                <span class="chip-title">تحقيق وتراث</span>
+                <span class="chip-sub">أميري • فاصل 25% • أصيل</span>
+              </button>
+              <button type="button" class="template-chip" data-preset="academic">
+                <span class="chip-title">بحث جامعي</span>
+                <span class="chip-sub">رسمي • ترويسة محكمة</span>
+              </button>
+              <button type="button" class="template-chip" data-preset="book">
+                <span class="chip-title">كتاب أصولي</span>
+                <span class="chip-sub">إطار كلاسيكي • فاخر</span>
+              </button>
+              <button type="button" class="template-chip" data-preset="clean">
+                <span class="chip-title">تقرير بسيط</span>
+                <span class="chip-sub">بدون إطارات • نقي</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Titles Customization -->
+          <div class="designer-section">
+            <div class="setting-group">
+              <label class="setting-label" for="pdfTitleInput">عنوان البحث المختصر (Title):</label>
+              <input type="text" id="pdfTitleInput" class="form-input" placeholder="عنوان البحث المختصر">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label" for="pdfSubtitleInput">العنوان الفرعي / التوثيق:</label>
+              <input type="text" id="pdfSubtitleInput" class="form-input" placeholder="تحرير علمي موثق من أمهات المصادر">
+            </div>
+          </div>
+
+          <!-- Typography & Spacing -->
+          <div class="designer-section">
+            <div class="designer-row">
+              <div class="setting-group" style="flex: 1;">
+                <label class="setting-label" for="pdfFontFamilySelect">نوع الخط:</label>
+                <select id="pdfFontFamilySelect" class="form-select">
+                  <option value="'Amiri', 'Traditional Arabic', serif">خط أميري الأصيل (تراثي)</option>
+                  <option value="'Cairo', sans-serif">خط كايرو (أكاديمي حديث)</option>
+                  <option value="'Noto Naskh Arabic', serif">خط النسخ القياسي</option>
+                  <option value="'Almarai', sans-serif">خط المراعي</option>
+                </select>
+              </div>
+              <div class="setting-group" style="flex: 1;">
+                <label class="setting-label" for="pdfFontSizeSelect">حجم الخط:</label>
+                <select id="pdfFontSizeSelect" class="form-select">
+                  <option value="15px">15px (قياسي)</option>
+                  <option value="16px" selected>16px (واضح)</option>
+                  <option value="17px">17px (كبير)</option>
+                  <option value="18px">18px (كتابي)</option>
+                  <option value="14px">14px (مكثف)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="designer-row">
+              <div class="setting-group" style="flex: 1;">
+                <label class="setting-label" for="pdfLineHeightSelect">تباعد الأسطر:</label>
+                <select id="pdfLineHeightSelect" class="form-select">
+                  <option value="2.0" selected>2.0 (مريح وأصيل)</option>
+                  <option value="1.85">1.85 (معياري)</option>
+                  <option value="2.2">2.2 (واسع ومريح)</option>
+                </select>
+              </div>
+              <div class="setting-group" style="flex: 1;">
+                <label class="setting-label" for="pdfMarginSelect">هوامش الصفحة:</label>
+                <select id="pdfMarginSelect" class="form-select">
+                  <option value="normal" selected>متوسطة (20mm)</option>
+                  <option value="wide">واسعة (25mm)</option>
+                  <option value="compact">ضيقة (14mm)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footnote & Layout Details -->
+          <div class="designer-section">
+            <div class="designer-row">
+              <div class="setting-group" style="flex: 1;">
+                <label class="setting-label" for="pdfFootnoteLineSelect">خط فاصل الحاشية:</label>
+                <select id="pdfFootnoteLineSelect" class="form-select">
+                  <option value="25%" selected>خط 25% من طول السطر (شرعي أصيل)</option>
+                  <option value="35%">خط 35% من طول السطر</option>
+                  <option value="50%">خط 50% من طول السطر</option>
+                  <option value="none">بدون خط فاصل</option>
+                </select>
+              </div>
+              <div class="setting-group" style="flex: 1;">
+                <label class="setting-label" for="pdfFrameSelect">إطار الصفحة:</label>
+                <select id="pdfFrameSelect" class="form-select">
+                  <option value="none" selected>بدون إطار</option>
+                  <option value="classic">إطار كلاسيكي مزدوج</option>
+                  <option value="simple">إطار بسيط رفيع</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="checkbox-options-grid">
+              <label class="checkbox-label">
+                <input type="checkbox" id="pdfShowHeaderCheck" checked>
+                <span>إظهار الترويسة العلوية الأكاديمية</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="pdfShowDateCheck" checked>
+                <span>إظهار تاريخ التقرير</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="pdfShowPageNumbersCheck" checked>
+                <span>ترقيم الصفحات أسفل الورقة</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Template Save / Load JSON -->
+          <div class="designer-section template-io-section">
+            <div class="template-io-title">إدارة القوالب (حفظ ورفع):</div>
+            <div class="template-io-buttons">
+              <button type="button" class="btn-micro" id="exportTemplateJsonBtn">
+                <i data-lucide="download"></i>
+                <span>حفظ القالب الحالي (JSON)</span>
+              </button>
+              <label class="btn-micro" style="cursor: pointer;">
+                <i data-lucide="upload"></i>
+                <span>رفع قالب مخصص</span>
+                <input type="file" id="importTemplateJsonInput" accept=".json" style="display: none;">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer pdf-designer-footer">
+        <button class="btn btn-secondary" id="cancelPdfDesignerBtn">إلغاء</button>
+        <button class="btn btn-secondary" id="downloadPdfDirectBtn">
+          <i data-lucide="download"></i>
+          <span>تنزيل ملف PDF فوري</span>
+        </button>
+        <button class="btn btn-primary" id="printVectorPdfBtn" style="background: #8E3A24; border-color: #8E3A24;">
+          <i data-lucide="printer"></i>
+          <span>طباعة وحفظ PDF عالي الدقة (Vector - موصى به)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Hidden container for clean PDF rendering -->
+  <div id="pdfPrintContainer" class="pdf-print-container" style="display:none;"></div>
+
+  <!-- Scripts -->
+  <script src="api.js?v=10"></script>
+  <script src="export.js?v=10"></script>
+  <script src="app.js?v=10"></script>
+</body>
+</html>
