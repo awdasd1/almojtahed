@@ -222,6 +222,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/healthz")
+@app.get("/health")
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "app": "shamela"}
+
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(

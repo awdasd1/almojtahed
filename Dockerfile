@@ -32,11 +32,11 @@ COPY entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x ./entrypoint.sh
 
-# Expose web application port
-EXPOSE 8000
+# Expose web application ports
+EXPOSE 8000 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+# Health check with generous start-period for PyTorch / model initialization
+HEALTHCHECK --interval=10s --timeout=5s --start-period=120s --retries=10 \
+    CMD sh -c 'curl -sf "http://127.0.0.1:${PORT:-8000}/healthz" || curl -sf "http://127.0.0.1:3000/healthz" || curl -sf "http://127.0.0.1:8000/healthz" || curl -sf "http://127.0.0.1:${PORT:-8000}/" || exit 1'
 
 ENTRYPOINT ["./entrypoint.sh"]
