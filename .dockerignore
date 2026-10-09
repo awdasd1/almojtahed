@@ -29,7 +29,7 @@ shamela_corpus-*.snapshot
 *.sqlite
 *.sqlite3
 shamela.db
-shamela_index.db
+!shamela_index.db
 
 # Qdrant Storage & Binaries
 qdrant_service/storage

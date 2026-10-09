@@ -41,12 +41,12 @@ wheels/
 badr.snapshot
 shamela_corpus-*.snapshot
 
-# Databases (Fetched via Cloud / Hugging Face)
+# Databases
 *.db
 *.sqlite
 *.sqlite3
 shamela.db
-shamela_index.db
+!shamela_index.db
 
 # Qdrant Local Engine Storage & Data
 qdrant_service/

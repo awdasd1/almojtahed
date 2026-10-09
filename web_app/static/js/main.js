@@ -267,18 +267,31 @@ async function loadBooksForModal(categoryId) {
         }
         
         const res = await fetch(url);
-        currentCategoryBooks = await res.json();
+        const data = await res.json();
         loadingEl.style.display = "none";
+        
+        if (!res.ok || !Array.isArray(data)) {
+            const errorMsg = data && (data.detail || data.message || data.error) ? (data.detail || data.message || data.error) : "قاعدة بيانات الفهرس (shamela_index.db) غير متوفرة بعد.";
+            container.innerHTML = `<div style="color: #ef4444; padding: 2rem; text-align: center;">⚠️ ${escapeHtml(String(errorMsg))}</div>`;
+            return;
+        }
+        
+        currentCategoryBooks = data;
         renderBookList(currentCategoryBooks);
     } catch (e) {
         loadingEl.style.display = "none";
-        container.innerHTML = `<div style="color: #ef4444; padding: 2rem; text-align: center;">تعذر تحميل قائمة الكتب: ${e.message}</div>`;
+        container.innerHTML = `<div style="color: #ef4444; padding: 2rem; text-align: center;">تعذر تحميل قائمة الكتب: ${escapeHtml(e.message)}</div>`;
     }
 }
 
 function renderBookList(books) {
     const container = document.getElementById("bookListContainer");
     container.innerHTML = "";
+
+    if (!Array.isArray(books)) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-dim);">لا توجد بيانات كتب صالحة للعرض.</div>`;
+        return;
+    }
 
     let filtered = books;
     const query = document.getElementById("bookFilterInput").value.trim().toLowerCase();

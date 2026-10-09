@@ -33,6 +33,14 @@ if [ -n "$HF_DATASET_REPO" ]; then
     fi
 fi
 
+# Ensure bundled shamela_index.db is placed in target location if target is missing
+INDEX_TARGET="${SHAMELA_INDEX_DB:-/app/shamela_index.db}"
+if [ ! -f "$INDEX_TARGET" ] && [ -f "/app/shamela_index.db" ]; then
+    mkdir -p "$(dirname "$INDEX_TARGET")"
+    cp "/app/shamela_index.db" "$INDEX_TARGET"
+    echo "✅ Seeded shamela_index.db into $INDEX_TARGET"
+fi
+
 # 2. Wait for Qdrant service if QDRANT_URL is specified (e.g. in docker-compose)
 if [ -n "$QDRANT_URL" ]; then
     echo "🔍 Checking Qdrant connection at $QDRANT_URL..."

@@ -29,6 +29,7 @@ COPY scripts/ ./scripts/
 COPY config.json ./config.json
 COPY shamela_mcp.py ./shamela_mcp.py
 COPY entrypoint.sh ./entrypoint.sh
+COPY shamela_index.db ./shamela_index.db
 
 RUN chmod +x ./entrypoint.sh
 
