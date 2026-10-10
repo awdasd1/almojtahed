@@ -23,9 +23,6 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-# Pre-cache FastEmbed BM25 inside Docker image (public model)
-RUN python3 -c "from fastembed import SparseTextEmbedding; SparseTextEmbedding(model_name='Qdrant/bm25')"
-
 # Copy application source code
 COPY web_app/ ./web_app/
 COPY scripts/ ./scripts/
