@@ -237,92 +237,92 @@ def search_shamela_text(
                 mode = data.get("mode", mode)
                 raw_results = data.get("results", [])
 
-            # 1. تطبيق خوارزمية تنويع الكتب (Book Diversity Re-ranking)
-            if book_diversity and raw_results:
-                diverse_results = []
-                book_counts = {}
-                max_per_book = 2 if target_limit >= 10 else 1
-                overflow_results = []
-                for r in raw_results:
-                    b_id = r.get("book_id")
-                    count = book_counts.get(b_id, 0)
-                    if count < max_per_book:
-                        book_counts[b_id] = count + 1
-                        diverse_results.append(r)
-                    else:
-                        overflow_results.append(r)
-                
-                # إذا لم تصل القائمة المتنوعة للحد المطلوب، نكمل من الفائض
-                if len(diverse_results) < target_limit:
-                    needed = target_limit - len(diverse_results)
-                    diverse_results.extend(overflow_results[:needed])
-                chosen_raw = diverse_results[:target_limit]
-            else:
-                chosen_raw = raw_results[:target_limit]
-
-            # 2. بناء النتائج مع خوارزمية توسيع سياق الصفحة (Window Expansion)
-            for r in chosen_raw:
+        # 1. تطبيق خوارزمية تنويع الكتب (Book Diversity Re-ranking)
+        if book_diversity and raw_results:
+            diverse_results = []
+            book_counts = {}
+            max_per_book = 2 if target_limit >= 10 else 1
+            overflow_results = []
+            for r in raw_results:
                 b_id = r.get("book_id")
-                b_text = r.get("betaka_text") or ""
-                if not b_text and b_id:
-                    b_text = get_book_betaka(int(b_id))
-                b_meta = parse_betaka_metadata(b_text) if b_text else {}
+                count = book_counts.get(b_id, 0)
+                if count < max_per_book:
+                    book_counts[b_id] = count + 1
+                    diverse_results.append(r)
+                else:
+                    overflow_results.append(r)
+            
+            # إذا لم تصل القائمة المتنوعة للحد المطلوب، نكمل من الفائض
+            if len(diverse_results) < target_limit:
+                needed = target_limit - len(diverse_results)
+                diverse_results.extend(overflow_results[:needed])
+            chosen_raw = diverse_results[:target_limit]
+        else:
+            chosen_raw = raw_results[:target_limit]
 
-                citation = format_scholarly_citation(
-                    title=r.get("title_ar", ""),
-                    author=r.get("author_name", ""),
-                    death_hijri=r.get("death_hijri"),
-                    part=r.get("part"),
-                    page_num=r.get("page_num"),
-                    meta=b_meta
-                )
+        # 2. بناء النتائج مع خوارزمية توسيع سياق الصفحة (Window Expansion)
+        for r in chosen_raw:
+            b_id = r.get("book_id")
+            b_text = r.get("betaka_text") or ""
+            if not b_text and b_id:
+                b_text = get_book_betaka(int(b_id))
+            b_meta = parse_betaka_metadata(b_text) if b_text else {}
 
-                body_content = r.get("full_body") or r.get("snippet", "")
-                snippet_content = body_content
+            citation = format_scholarly_citation(
+                title=r.get("title_ar", ""),
+                author=r.get("author_name", ""),
+                death_hijri=r.get("death_hijri"),
+                part=r.get("part"),
+                page_num=r.get("page_num"),
+                meta=b_meta
+            )
 
-                # تطبيق توسيع السياق بربط الصفحة بالسياق المحيط لعدم بتر المسألة
-                if window_expansion and b_id and r.get("page_num"):
-                    try:
-                        p_ctx = get_page_context(int(b_id), r.get("page_num"), r.get("part"), include_context=True)
-                        if p_ctx and not p_ctx.get("error"):
-                            expanded_parts = []
-                            if p_ctx.get("previous_page") and p_ctx["previous_page"].get("body"):
-                                prev_text = p_ctx["previous_page"]["body"].strip()
-                                if prev_text:
-                                    expanded_parts.append(f"[سياق الصفحة السابقة ص {p_ctx['previous_page'].get('page_num')}]:\n{prev_text[-500:]}")
-                            if p_ctx.get("page") and p_ctx["page"].get("body"):
-                                cur_text = p_ctx["page"]["body"].strip()
-                                if cur_text:
-                                    expanded_parts.append(f"[نص المسألة ص {r.get('page_num')}]:\n{cur_text}")
-                            if p_ctx.get("next_page") and p_ctx["next_page"].get("body"):
-                                next_text = p_ctx["next_page"]["body"].strip()
-                                if next_text:
-                                    expanded_parts.append(f"[سياق الصفحة اللاحقة ص {p_ctx['next_page'].get('page_num')}]:\n{next_text[:500]}")
-                            if expanded_parts:
-                                body_content = "\n\n---\n".join(expanded_parts)
-                                snippet_content = body_content[:1500]
-                    except Exception:
-                        pass
+            body_content = r.get("full_body") or r.get("snippet", "")
+            snippet_content = body_content
 
-                results.append({
-                    "book_id": b_id,
-                    "title": r.get("title_ar"),
-                    "category": r.get("category_name_ar"),
-                    "author": r.get("author_name"),
-                    "author_death_hijri": r.get("death_hijri"),
-                    "part": r.get("part"),
-                    "page_num": r.get("page_num"),
-                    "publisher": b_meta.get("publisher", ""),
-                    "edition": b_meta.get("edition", ""),
-                    "investigator": b_meta.get("investigator", ""),
-                    "parts_count": b_meta.get("parts_count", ""),
-                    "printed_status": b_meta.get("printed_status", ""),
-                    "bibliographic_card": b_meta.get("raw_card") or b_text,
-                    "score": round(float(r.get("score", 0)), 4),
-                    "snippet": snippet_content,
-                    "full_body": body_content,
-                    "citation": citation
-                })
+            # تطبيق توسيع السياق بربط الصفحة بالسياق المحيط لعدم بتر المسألة
+            if window_expansion and b_id and r.get("page_num"):
+                try:
+                    p_ctx = get_page_context(int(b_id), r.get("page_num"), r.get("part"), include_context=True)
+                    if p_ctx and not p_ctx.get("error"):
+                        expanded_parts = []
+                        if p_ctx.get("previous_page") and p_ctx["previous_page"].get("body"):
+                            prev_text = p_ctx["previous_page"]["body"].strip()
+                            if prev_text:
+                                expanded_parts.append(f"[سياق الصفحة السابقة ص {p_ctx['previous_page'].get('page_num')}]:\n{prev_text[-500:]}")
+                        if p_ctx.get("page") and p_ctx["page"].get("body"):
+                            cur_text = p_ctx["page"]["body"].strip()
+                            if cur_text:
+                                expanded_parts.append(f"[نص المسألة ص {r.get('page_num')}]:\n{cur_text}")
+                        if p_ctx.get("next_page") and p_ctx["next_page"].get("body"):
+                            next_text = p_ctx["next_page"]["body"].strip()
+                            if next_text:
+                                expanded_parts.append(f"[سياق الصفحة اللاحقة ص {p_ctx['next_page'].get('page_num')}]:\n{next_text[:500]}")
+                        if expanded_parts:
+                            body_content = "\n\n---\n".join(expanded_parts)
+                            snippet_content = body_content[:1500]
+                except Exception:
+                    pass
+
+            results.append({
+                "book_id": b_id,
+                "title": r.get("title_ar"),
+                "category": r.get("category_name_ar"),
+                "author": r.get("author_name"),
+                "author_death_hijri": r.get("death_hijri"),
+                "part": r.get("part"),
+                "page_num": r.get("page_num"),
+                "publisher": b_meta.get("publisher", ""),
+                "edition": b_meta.get("edition", ""),
+                "investigator": b_meta.get("investigator", ""),
+                "parts_count": b_meta.get("parts_count", ""),
+                "printed_status": b_meta.get("printed_status", ""),
+                "bibliographic_card": b_meta.get("raw_card") or b_text,
+                "score": round(float(r.get("score", 0)), 4),
+                "snippet": snippet_content,
+                "full_body": body_content,
+                "citation": citation
+            })
     except Exception as e:
         # في حال كان الخادم المحلي لا يستجيب عبر HTTP في وضع stdio المستقل، نبحث في قاعدة الفهرس
         print(f"Fallback search via SQLite: {e}")

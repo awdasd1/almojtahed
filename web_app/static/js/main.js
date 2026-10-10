@@ -6636,7 +6636,7 @@ async function runMcpStudioCustomTool() {
             return;
         }
 
-        const items = r.results || (Array.isArray(r) ? r : []);
+        const items = r.results || r.recommended_references || r.verses || r.isnads || r.isnad_chains || r.narrators || (Array.isArray(r) ? r : []);
 
         if (!items || items.length === 0) {
             const noteHtml = r.note ? `<div style="margin-top: 0.5rem; font-size: 0.8rem; color: #fef08a;">💡 ملاحظة: ${escapeHtml(r.note)}</div>` : '';
@@ -6652,7 +6652,7 @@ async function runMcpStudioCustomTool() {
         let html = `
             <div class="mcp-result-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
                 <div>
-                    <span style="font-weight: 700; color: #a855f7;">⚡ تم استخراج ${items.length} نصاً محققاً</span>
+                    <span style="font-weight: 700; color: #a855f7;">⚡ تم استخراج ${items.length} نتيجة محققة</span>
                     <span style="font-size: 0.75rem; color: #94a3b8; margin-right: 0.5rem;">(الأداة: ${escapeHtml(toolName)})</span>
                 </div>
                 <span class="mcp-latency-pill">⚡ ${duration} ms</span>
@@ -6661,11 +6661,11 @@ async function runMcpStudioCustomTool() {
         `;
 
         items.forEach((item, idx) => {
-            const bTitle = item.title || item.book_title || "كتاب من الشاملة";
-            const author = item.author ? `لـ ${item.author}` : "";
+            const bTitle = item.title || item.book_title || item.short_name || item.name || (item.verse_id ? `آية قرآنية رقم ${item.verse_id}` : "كتاب من الشاملة");
+            const author = item.author ? `لـ ${item.author}` : (item.ibn_hajar_rank ? `(${item.ibn_hajar_rank})` : "");
             const death = item.author_death_hijri ? `(ت ${item.author_death_hijri}هـ)` : "";
-            const loc = (item.part ? `ج: ${item.part} ` : "") + (item.page_num ? `ص: ${item.page_num}` : "");
-            const snippet = item.snippet || item.full_body || item.text || "";
+            const loc = (item.part ? `ج: ${item.part} ` : "") + (item.page_num ? `ص: ${item.page_num}` : "") + (item.era_label ? ` [${item.era_label}]` : "");
+            const snippet = item.snippet || item.full_body || item.text || item.chain_text || (item.criticism_quotes ? item.criticism_quotes.map(c => `${c.scholar}: ${c.text}`).join('\n') : "") || "";
             const citation = item.citation || `«${bTitle}» ${author} ${death} ${loc}`.trim();
 
             html += `
