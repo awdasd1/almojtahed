@@ -165,10 +165,51 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def create_resilient_qdrant_client() -> QdrantClient:
+    """إنشاء اتصال مرن بمحرك Qdrant يكتشف تلقائياً العنوان الصحيح في بيئة Docker / Coolify / Localhost"""
+    configured_url = os.environ.get("QDRANT_URL", "").strip()
+    candidates = []
+    if configured_url:
+        candidates.append(configured_url)
+        
+    candidates.extend([
+        "http://localhost:6333",
+        "http://172.17.0.1:6333",        # Docker default bridge gateway to host (Linux/VPS)
+        "http://host.docker.internal:6333", # Docker Desktop / Host internal
+        "http://qdrant:6333",            # Docker Compose service name
+    ])
+    
+    # محاولة استخدام الدومين أو الآي بي الخارجي للسيرفر (Hetzner / Coolify)
+    for env_key in ("COOLIFY_FQDN", "DOMAIN", "SERVER_IP", "HOST_IP"):
+        val = os.environ.get(env_key, "").strip()
+        if val:
+            clean = val.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+            if clean and f"http://{clean}:6333" not in candidates:
+                candidates.append(f"http://{clean}:6333")
+
+    # إضافة آي بي خادم المجتهد الفعلي
+    if "http://5.75.141.129:6333" not in candidates:
+        candidates.append("http://5.75.141.129:6333")
+    if "http://mj.majalat.ai:6333" not in candidates:
+        candidates.append("http://mj.majalat.ai:6333")
+
+    for cand in candidates:
+        try:
+            client = QdrantClient(url=cand, timeout=2.5, check_compatibility=False)
+            client.get_collections()
+            print(f"✅ [Qdrant] Connected successfully to: {cand}")
+            return client
+        except Exception:
+            continue
+            
+    fallback = configured_url or "http://localhost:6333"
+    print(f"⚠️ [Qdrant] Failed to connect to probed candidates, fallback to: {fallback}")
+    return QdrantClient(url=fallback, check_compatibility=False)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print(f"🚀 Initializing Shamela Search Engine on device: {state['device']}...")
-    state["qdrant"] = QdrantClient(url=QDRANT_URL)
+    state["qdrant"] = create_resilient_qdrant_client()
     state["db_conn"] = get_db()
     
     # Load BGE-M3 model
@@ -455,6 +496,8 @@ def find_book_page(rel_path: str, page_num: Any, text_hint: Optional[str] = None
 
 @app.get("/api/stats")
 async def get_stats():
+    if state.get("qdrant") is None:
+        state["qdrant"] = create_resilient_qdrant_client()
     qdrant = state["qdrant"]
     cur = state["db_conn"].cursor()
     cur.execute("SELECT COUNT(*) FROM books")
@@ -557,7 +600,23 @@ async def search(req: SearchRequest):
     if not query:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
         
+    if state.get("qdrant") is None:
+        state["qdrant"] = create_resilient_qdrant_client()
     qdrant = state["qdrant"]
+
+    def safe_query_points(**kwargs):
+        nonlocal qdrant
+        try:
+            return qdrant.query_points(**kwargs)
+        except Exception as q_err:
+            err_str = str(q_err)
+            if "Connection refused" in err_str or "111" in err_str or "ResponseHandlingException" in type(q_err).__name__:
+                print(f"⚠️ [Qdrant] Connection refused on active endpoint. Auto-discovering reachable Qdrant...")
+                qdrant = create_resilient_qdrant_client()
+                state["qdrant"] = qdrant
+                return qdrant.query_points(**kwargs)
+            raise q_err
+
     target_coll = req.collection_name or BADR_ALL_TSH_COLLECTION_NAME
     if target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME) and not state.get("badr_model"):
         target_coll = COLLECTION_NAME
@@ -622,7 +681,7 @@ async def search(req: SearchRequest):
         t_search0 = time.time()
         if target_coll == BADR_ALL_TSH_COLLECTION_NAME:
             if req.mode == "dense" or not sparse_vec:
-                search_res = qdrant.query_points(
+                search_res = safe_query_points(
                     collection_name=target_coll,
                     query=dense_vec,
                     using="text-dense",
@@ -631,7 +690,7 @@ async def search(req: SearchRequest):
                     with_payload=True
                 )
             elif req.mode == "sparse":
-                search_res = qdrant.query_points(
+                search_res = safe_query_points(
                     collection_name=target_coll,
                     query=sparse_vec,
                     using="text-sparse",
@@ -640,7 +699,7 @@ async def search(req: SearchRequest):
                     with_payload=True
                 )
             else: # hybrid (default)
-                search_res = qdrant.query_points(
+                search_res = safe_query_points(
                     collection_name=target_coll,
                     prefetch=[
                         Prefetch(query=dense_vec, using="text-dense", filter=qdrant_filter, limit=fetch_limit),
@@ -652,7 +711,7 @@ async def search(req: SearchRequest):
                 )
         else:
             # badr_corpus / badr_tch_corpus (unnamed dense vector)
-            search_res = qdrant.query_points(
+            search_res = safe_query_points(
                 collection_name=target_coll,
                 query=dense_vec,
                 query_filter=qdrant_filter,
@@ -805,7 +864,7 @@ async def search(req: SearchRequest):
     t_search0 = time.time()
     
     if req.mode == "dense":
-        search_res = qdrant.query_points(
+        search_res = safe_query_points(
             collection_name=COLLECTION_NAME,
             query=dense_vec,
             using="dense",
@@ -814,7 +873,7 @@ async def search(req: SearchRequest):
             with_payload=True
         )
     elif req.mode == "sparse":
-        search_res = qdrant.query_points(
+        search_res = safe_query_points(
             collection_name=COLLECTION_NAME,
             query=SparseVector(indices=sparse_indices, values=sparse_values),
             using="sparse",
@@ -823,7 +882,7 @@ async def search(req: SearchRequest):
             with_payload=True
         )
     else: # Hybrid RRF
-        search_res = qdrant.query_points(
+        search_res = safe_query_points(
             collection_name=COLLECTION_NAME,
             prefetch=[
                 Prefetch(query=dense_vec, using="dense", filter=qdrant_filter, limit=fetch_limit * 2),
@@ -924,13 +983,14 @@ async def get_page(
 
     # If point_id is given and no text_hint, retrieve text from Qdrant as hint
     if point_id and not text_hint:
-        for c_cand in [BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME, COLLECTION_NAME]:
+        for c_cand in [BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME, COLLECTION_NAME]:
             try:
-                pt = state["qdrant"].retrieve(collection_name=c_cand, ids=[point_id])
-                if pt and pt[0].payload:
-                    text_hint = pt[0].payload.get("text")
-                    if text_hint:
-                        break
+                if state.get("qdrant"):
+                    pt = state["qdrant"].retrieve(collection_name=c_cand, ids=[point_id])
+                    if pt and pt[0].payload:
+                        text_hint = pt[0].payload.get("text")
+                        if text_hint:
+                            break
             except Exception:
                 pass
 
