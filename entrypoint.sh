@@ -5,6 +5,10 @@ echo "=========================================================="
 echo "📚 Starting Shamela AI Web Application (Coolify / Docker)"
 echo "=========================================================="
 
+if [ -n "$HF_TOKEN" ]; then
+    export BADR_HF_TOKEN="${BADR_HF_TOKEN:-$HF_TOKEN}"
+fi
+
 # 1. Automatic Database Asset Download from Hugging Face if configured
 if [ -n "$HF_DATASET_REPO" ]; then
     DATA_TARGET_DIR="${DATA_DIR:-/app/data}"

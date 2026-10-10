@@ -43,7 +43,7 @@ BADR_TCH_COLLECTION_NAME = "badr_tch_corpus"
 BADR_ALL_TSH_COLLECTION_NAME = "badr_all_tsh_corpus"
 BADR_MODEL_ID = "somayaeltanbouly/Badr_embedding_v0"
 _raw_token = (os.environ.get("BADR_HF_TOKEN") or os.environ.get("HF_TOKEN") or "").strip()
-BADR_HF_TOKEN = _raw_token if _raw_token else None
+BADR_HF_TOKEN = _raw_token if (_raw_token and not _raw_token.startswith("hf_...")) else None
 RERANKER_MODEL_ID = "BAAI/bge-reranker-v2-m3"
 
 # Global state
@@ -208,26 +208,26 @@ def create_resilient_qdrant_client() -> QdrantClient:
     return QdrantClient(url=fallback, check_compatibility=False)
 
 def get_badr_model():
-    """الحصول على نموذج تضمين بدر (768 أبعاد) مع دعم التنزيل المباشر بدون توكن"""
+    """الحصول على نموذج تضمين بدر (768 أبعاد) مع دعم المصادقة التلقائية لـ Gated Model"""
     if state.get("badr_model") is None:
-        # محاولة 1: تحميل مباشر بدون توكن (نموذج عام ومجاني ومخزن محلياً)
-        try:
-            print(f"⏳ Loading {BADR_MODEL_ID} embedding model (anonymous)...")
-            state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, device="cpu")
-            print("✅ Badr Embedding Model loaded successfully!")
-            return state["badr_model"]
-        except Exception as be:
-            print(f"⚠️ Direct anonymous load of {BADR_MODEL_ID} failed: {be}")
-
-        # محاولة 2: بالتوكن إذا تم توفيره وكان صالحاً
-        if BADR_HF_TOKEN and not BADR_HF_TOKEN.startswith("hf_..."):
+        # محاولة 1: تحميل مصادق بالتوكن (لأنه نموذج مقيد Gated Model)
+        if BADR_HF_TOKEN:
             try:
-                print(f"⏳ Retrying {BADR_MODEL_ID} with HF_TOKEN...")
+                print(f"⏳ Loading {BADR_MODEL_ID} embedding model with authenticated token...")
                 state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, token=BADR_HF_TOKEN, device="cpu")
-                print("✅ Badr Embedding Model loaded successfully with token!")
+                print("✅ Badr Embedding Model loaded successfully!")
                 return state["badr_model"]
-            except Exception as be2:
-                print(f"⚠️ Token load of {BADR_MODEL_ID} failed: {be2}")
+            except Exception as be:
+                print(f"⚠️ Authenticated load of {BADR_MODEL_ID} failed: {be}")
+
+        # محاولة 2: تحميل بدون توكن كاحتياط
+        try:
+            print(f"⏳ Trying {BADR_MODEL_ID} anonymous load...")
+            state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, device="cpu")
+            print("✅ Badr Embedding Model loaded anonymously!")
+            return state["badr_model"]
+        except Exception as be2:
+            print(f"⚠️ Anonymous load of {BADR_MODEL_ID} failed: {be2}")
     return state.get("badr_model")
 
 def get_bm25_model():
