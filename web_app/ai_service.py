@@ -391,7 +391,7 @@ async def call_ai_chat(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
                     "Authorization": f"Bearer {api_key}",
-                    "HTTP-Referer": "http://localhost:8000",
+                    "HTTP-Referer": "https://mj.majalat.ai",
                     "X-Title": "Shamela AI Search"
                 },
                 json=payload
@@ -405,7 +405,7 @@ async def call_ai_chat(
                         "https://openrouter.ai/api/v1/chat/completions",
                         headers={
                             "Authorization": f"Bearer {api_key}",
-                            "HTTP-Referer": "http://localhost:8000",
+                            "HTTP-Referer": "https://mj.majalat.ai",
                             "X-Title": "Shamela AI Search"
                         },
                         json=payload
@@ -440,7 +440,7 @@ async def call_ai_chat(
                         "https://openrouter.ai/api/v1/chat/completions",
                         headers={
                             "Authorization": f"Bearer {api_key}",
-                            "HTTP-Referer": "http://localhost:8000",
+                            "HTTP-Referer": "https://mj.majalat.ai",
                             "X-Title": "Shamela AI Search"
                         },
                         json=cont_payload

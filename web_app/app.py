@@ -2322,8 +2322,12 @@ async def api_query_agent_get(
     )
 
 @app.get("/api/ai/agent/code-examples")
-def get_agent_code_examples(agent_ids: Optional[str] = None, agent_id: Optional[str] = "bukhari"):
+def get_agent_code_examples(request: Request, agent_ids: Optional[str] = None, agent_id: Optional[str] = "bukhari"):
     """أمثلة برمجية لنسخها واستدعاء وكيل واحد أو عدة وكلاء بالتوازي من Python أو JavaScript أو cURL."""
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+    base_url = f"{proto}://{host}".rstrip("/")
+
     ids = []
     if agent_ids:
         ids = [i.strip() for i in agent_ids.split(",") if i.strip()]
@@ -2339,7 +2343,7 @@ def get_agent_code_examples(agent_ids: Optional[str] = None, agent_id: Optional[
     if is_multi:
         py_code = f"""import requests
 
-url = "http://localhost:8000/api/ai/agent/query"
+url = "{base_url}/api/ai/agent/query"
 payload = {{
     "agent_ids": {ids_json},  # استدعاء {len(ids)} وكلاء مساعدين بالتوازي
     "query": "ما حكم المسألة الفقهية أو الأثر في مختلف العلوم؟",
@@ -2364,7 +2368,7 @@ for item in response.get("results", []):
 """
         js_code = f"""// استدعاء {len(ids)} وكلاء مساعدين بالتوازي من الويب (JavaScript)
 async function askScholars(query) {{
-  const response = await fetch('http://localhost:8000/api/ai/agent/query', {{
+  const response = await fetch('{base_url}/api/ai/agent/query', {{
     method: 'POST',
     headers: {{ 'Content-Type': 'application/json' }},
     body: JSON.stringify({{
@@ -2383,15 +2387,15 @@ async function askScholars(query) {{
   return data;
 }}
 """
-        curl_code = f"""curl -X POST "http://localhost:8000/api/ai/agent/query" \\
+        curl_code = f"""curl -X POST "{base_url}/api/ai/agent/query" \\
   -H "Content-Type: application/json" \\
   -d '{{"agent_ids": {ids_json}, "query": "ما حكم المسألة؟", "api_key": "YOUR_KEY"}}'"""
-        url_example = f"http://localhost:8000/api/ai/agent/query?agent_ids={ids_str}&query=ما+حكم+المسألة&api_key=YOUR_KEY"
+        url_example = f"{base_url}/api/ai/agent/query?agent_ids={ids_str}&query=ما+حكم+المسألة&api_key=YOUR_KEY"
     else:
         single_id = ids[0]
         py_code = f"""import requests
 
-url = "http://localhost:8000/api/ai/agent/query"
+url = "{base_url}/api/ai/agent/query"
 payload = {{
     "agent_id": "{single_id}",
     "query": "ما حكم المسألة الفقهية أو نص الحديث؟",
@@ -2408,7 +2412,7 @@ for s in response.get("sources", []):
     print(f"- {{s['citation']}}")
 """
         js_code = f"""async function askAgent(query) {{
-  const response = await fetch('http://localhost:8000/api/ai/agent/query', {{
+  const response = await fetch('{base_url}/api/ai/agent/query', {{
     method: 'POST',
     headers: {{ 'Content-Type': 'application/json' }},
     body: JSON.stringify({{
@@ -2422,10 +2426,10 @@ for s in response.get("sources", []):
   return data;
 }}
 """
-        curl_code = f"""curl -X POST "http://localhost:8000/api/ai/agent/query" \\
+        curl_code = f"""curl -X POST "{base_url}/api/ai/agent/query" \\
   -H "Content-Type: application/json" \\
   -d '{{"agent_id": "{single_id}", "query": "ما حكم المسألة؟", "api_key": "YOUR_KEY"}}'"""
-        url_example = f"http://localhost:8000/api/ai/agent/query?agent_id={single_id}&query=ما+حكم+المسألة&api_key=YOUR_KEY"
+        url_example = f"{base_url}/api/ai/agent/query?agent_id={single_id}&query=ما+حكم+المسألة&api_key=YOUR_KEY"
 
     return {
         "status": "success",

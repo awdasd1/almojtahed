@@ -1132,7 +1132,7 @@ function saveAiSettings() {
         helper_model: document.getElementById("aiHelperModelSelect")?.value || "google/gemini-2.5-flash",
         rag_enabled: document.getElementById("aiRagEnabled")?.checked ?? true,
         reformulate_query: document.getElementById("aiReformulateQuery")?.checked ?? true,
-        iterative_research: document.getElementById("aiIterativeResearch")?.checked ?? true,
+        iterative_research: document.getElementById("aiIterativeResearch")?.checked ?? false,
         max_research_hops: document.getElementById("aiMaxHopsSelect")?.value || "2",
         rag_limit: document.getElementById("aiRagLimitSelect")?.value || "5",
         rag_mode: document.getElementById("aiRagModeSelect")?.value || "hybrid",
