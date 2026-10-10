@@ -622,6 +622,21 @@
                                         المحلية (تعمل بدون مفتاح مباشرة على جهازك)</span>
                                 </div>
 
+                                <!-- توكن Hugging Face للنموذج المقيد بدر 768 -->
+                                <div class="form-group" style="background: var(--bg-surface, #ffffff); border: 1px solid var(--border-color, #e8e4dc); border-radius: var(--radius-sm, 8px); padding: 0.75rem; margin-top: 0.85rem; margin-bottom: 0.85rem;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.4rem;">
+                                        <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-main);">🔑 توكن Hugging Face (نموذج بدر 768)</span>
+                                        <span id="hfTokenBadgeProv" class="badge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: rgba(218, 119, 86, 0.12); color: var(--accent, #da7756);">فحص الحالة...</span>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="password" id="inputHfTokenProv" class="form-control" placeholder="hf_xxxxxxxxxxxxxxxx..." style="flex: 1; font-family: monospace; font-size: 0.8rem; padding: 0.45rem 0.6rem;">
+                                        <button type="button" id="btnSaveHfTokenProv" class="btn btn-primary" onclick="submitHfToken('prov')" style="white-space: nowrap; font-size: 0.8rem; padding: 0.45rem 0.85rem; background: var(--accent, #da7756); border: none; color: #fff; border-radius: 6px; cursor: pointer;">حفظ وتفعيل</button>
+                                    </div>
+                                    <small id="hfTokenFeedbackProv" style="display: block; margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-muted, #736f69); line-height: 1.3;">
+                                        يلزم لتفعيل نموذج بدر 768 المصادق عليه في عمليات البحث الفقهي واسترجاع النصوص.
+                                    </small>
+                                </div>
+
                                 <div class="form-group">
                                     <div
                                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
@@ -2974,7 +2989,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- Scripts -->
-    <script src="/static/js/main.js?v=5.4"></script>
+    <script src="/static/js/main.js?v=5.5"></script>
 </body>
 
 </html>

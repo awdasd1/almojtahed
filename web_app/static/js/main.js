@@ -55,28 +55,34 @@ async function initDynamicEndpoints() {
 
 // فحص وإدارة توكن Hugging Face لنموذج بدر 768
 async function checkHfTokenStatus() {
-    const badge = document.getElementById("hfTokenBadge");
-    const feedback = document.getElementById("hfTokenFeedback");
-    if (!badge) return;
+    const badges = [document.getElementById("hfTokenBadge"), document.getElementById("hfTokenBadgeProv")].filter(Boolean);
+    const feedbacks = [document.getElementById("hfTokenFeedback"), document.getElementById("hfTokenFeedbackProv")].filter(Boolean);
+    if (!badges.length) return;
     try {
         const res = await fetch("/api/settings/hf-token");
         if (res.ok) {
             const data = await res.json();
             if (data.model_loaded) {
-                badge.style.background = "rgba(16, 185, 129, 0.15)";
-                badge.style.color = "#10b981";
-                badge.innerText = "✅ متصل ونشط (768)";
-                if (feedback) feedback.innerText = `النموذج جاهز في الذاكرة (التوكن: ${data.token_prefix || "متوفر"}).`;
+                badges.forEach(b => {
+                    b.style.background = "rgba(16, 185, 129, 0.15)";
+                    b.style.color = "#10b981";
+                    b.innerText = "✅ متصل ونشط (768)";
+                });
+                feedbacks.forEach(f => f.innerText = `النموذج جاهز في الذاكرة (التوكن: ${data.token_prefix || "متوفر"}).`);
             } else if (data.has_token) {
-                badge.style.background = "rgba(245, 158, 11, 0.15)";
-                badge.style.color = "#f59e0b";
-                badge.innerText = "⏳ قيد التحميل...";
-                if (feedback) feedback.innerText = data.error || "التوكن محفوظ، جارٍ الاتصال بـ Hugging Face...";
+                badges.forEach(b => {
+                    b.style.background = "rgba(245, 158, 11, 0.15)";
+                    b.style.color = "#f59e0b";
+                    b.innerText = "⏳ قيد التحميل...";
+                });
+                feedbacks.forEach(f => f.innerText = data.error || "التوكن محفوظ، جارٍ الاتصال بـ Hugging Face...");
             } else {
-                badge.style.background = "rgba(239, 68, 68, 0.15)";
-                badge.style.color = "#ef4444";
-                badge.innerText = "⚠️ يتطلب توكن";
-                if (feedback) feedback.innerText = "أدخل توكن Hugging Face المصرح له للوصول لنموذج بدر 768 ثم اضغط حفظ وتفعيل.";
+                badges.forEach(b => {
+                    b.style.background = "rgba(239, 68, 68, 0.15)";
+                    b.style.color = "#ef4444";
+                    b.innerText = "⚠️ يتطلب توكن";
+                });
+                feedbacks.forEach(f => f.innerText = "أدخل توكن Hugging Face المصرح له للوصول لنموذج بدر 768 ثم اضغط حفظ وتفعيل.");
             }
         }
     } catch (e) {
@@ -84,22 +90,29 @@ async function checkHfTokenStatus() {
     }
 }
 
-async function submitHfToken() {
-    const input = document.getElementById("inputHfToken");
-    const btn = document.getElementById("btnSaveHfToken");
-    const badge = document.getElementById("hfTokenBadge");
-    const feedback = document.getElementById("hfTokenFeedback");
+async function submitHfToken(source) {
+    let input = null;
+    if (source === 'prov') input = document.getElementById("inputHfTokenProv");
+    else if (source === 'inline') input = document.getElementById("inputHfTokenInline");
+    else input = document.getElementById("inputHfToken");
+
+    if (!input || !input.value.trim()) {
+        input = [document.getElementById("inputHfTokenProv"), document.getElementById("inputHfToken"), document.getElementById("inputHfTokenInline")].find(el => el && el.value.trim());
+    }
+
     if (!input || !input.value.trim()) {
         if (typeof showToast === "function") showToast("يرجى إدخال التوكن أولاً (يبدأ بـ hf_)", "error");
         else alert("يرجى إدخال التوكن أولاً (يبدأ بـ hf_)");
         return;
     }
     const tokenVal = input.value.trim();
-    if (btn) {
-        btn.disabled = true;
-        btn.innerText = "⏳ جارٍ المصادقة والتحميل...";
-    }
-    if (feedback) feedback.innerText = "جارٍ إرسال التوكن إلى الخادم والاتصال بـ Hugging Face لتحميل أوزان بدر 768...";
+    const btns = [document.getElementById("btnSaveHfToken"), document.getElementById("btnSaveHfTokenProv")].filter(Boolean);
+    const badges = [document.getElementById("hfTokenBadge"), document.getElementById("hfTokenBadgeProv")].filter(Boolean);
+    const feedbacks = [document.getElementById("hfTokenFeedback"), document.getElementById("hfTokenFeedbackProv")].filter(Boolean);
+
+    btns.forEach(b => { b.disabled = true; b.innerText = "⏳ جارٍ التحميل..."; });
+    feedbacks.forEach(f => f.innerText = "جارٍ إرسال التوكن والاتصال بـ Hugging Face لتحميل أوزان بدر 768...");
+
     try {
         const res = await fetch("/api/settings/hf-token", {
             method: "POST",
@@ -108,26 +121,27 @@ async function submitHfToken() {
         });
         const data = await res.json();
         if (res.ok && data.status === "success") {
-            if (typeof showToast === "function") showToast("✅ تم حفظ التوكن ومصادقة نموذج بدر 768 بنجاح!", "success");
-            input.value = "";
+            if (typeof showToast === "function") showToast("✅ تم تفعيل وتحميل نموذج بدر 768 بنجاح!", "success");
+            [document.getElementById("inputHfToken"), document.getElementById("inputHfTokenProv")].forEach(inp => { if (inp) inp.value = ""; });
             checkHfTokenStatus();
+            if (source === 'inline') {
+                const searchBtn = document.getElementById("searchBtn");
+                if (searchBtn) searchBtn.click();
+            }
         } else {
             const errDetail = data.detail || "فشل التحميل";
             if (typeof showToast === "function") showToast(errDetail, "error");
-            if (badge) {
-                badge.style.background = "rgba(239, 68, 68, 0.15)";
-                badge.style.color = "#ef4444";
-                badge.innerText = "❌ خطأ مصادقة";
-            }
-            if (feedback) feedback.innerText = errDetail;
+            badges.forEach(b => {
+                b.style.background = "rgba(239, 68, 68, 0.15)";
+                b.style.color = "#ef4444";
+                b.innerText = "❌ خطأ مصادقة";
+            });
+            feedbacks.forEach(f => f.innerText = errDetail);
         }
     } catch (e) {
         if (typeof showToast === "function") showToast(`خطأ في الاتصال: ${e.message}`, "error");
     } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerText = "حفظ وتفعيل";
-        }
+        btns.forEach(b => { b.disabled = false; b.innerText = "حفظ وتفعيل"; });
     }
 }
 
@@ -665,7 +679,27 @@ async function performSearch() {
         });
 
         if (!res.ok) {
-            throw new Error("فشل طلب البحث من الخادم");
+            let errDetail = "فشل طلب البحث من الخادم";
+            try {
+                const errJson = await res.json();
+                if (errJson && errJson.detail) errDetail = errJson.detail;
+            } catch (_) {}
+            
+            if (errDetail.includes("Hugging Face") || errDetail.includes("Gated") || errDetail.includes("بدر") || errDetail.includes("HF_TOKEN")) {
+                loadingBox.style.display = "none";
+                resultsMeta.innerHTML = `
+                    <div style="background: rgba(218, 119, 86, 0.08); border: 1px solid var(--accent, #da7756); border-radius: 8px; padding: 12px; margin: 10px 0;">
+                        <div style="font-weight: 700; color: var(--accent, #da7756); margin-bottom: 5px;">🔑 يلزم إدخال توكن Hugging Face لتفعيل نموذج بدر 768:</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">${escapeHtml(errDetail)}</div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="password" id="inputHfTokenInline" class="form-control" placeholder="hf_xxxxxxxxxxxxxxxx..." style="flex: 1; font-family: monospace; font-size: 0.85rem; padding: 6px 10px;">
+                            <button type="button" class="btn btn-primary" onclick="submitHfToken('inline')" style="white-space: nowrap; font-size: 0.85rem; padding: 6px 14px; background: var(--accent, #da7756); border: none; color: #fff; border-radius: 6px; cursor: pointer;">تفعيل وإعادة البحث 🚀</button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            throw new Error(errDetail);
         }
 
         const data = await res.json();
