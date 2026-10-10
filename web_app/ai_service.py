@@ -369,13 +369,16 @@ async def call_ai_chat(
         elif provider == "openrouter":
             # خريطة تحويل الأسماء القديمة/الملغاة تلقائياً لتفادي أخطاء 404
             OPENROUTER_MODEL_MAP = {
-                "anthropic/claude-sonnet-4.5": "anthropic/claude-3.5-sonnet",
-                "anthropic/claude-sonnet-4": "anthropic/claude-3.5-sonnet",
-                "anthropic/claude-3-5-sonnet-20241022": "anthropic/claude-3.5-sonnet",
-                "anthropic/claude-3-sonnet": "anthropic/claude-3.5-sonnet",
-                "google/gemini-pro-1.5": "google/gemini-2.0-flash-001",
+                "anthropic/claude-3.5-sonnet": "anthropic/claude-sonnet-4.5",
+                "anthropic/claude-3-5-sonnet-20241022": "anthropic/claude-sonnet-4.5",
+                "anthropic/claude-3-sonnet": "anthropic/claude-sonnet-4.5",
+                "anthropic/claude-sonnet-4": "anthropic/claude-sonnet-4.5",
+                "google/gemini-pro-1.5": "google/gemini-2.5-flash",
+                "google/gemini-2.0-flash-001": "google/gemini-2.5-flash",
+                "google/gemini-2.0-flash-exp": "google/gemini-2.5-flash",
+                "google/gemini-2.0-flash-exp:free": "google/gemini-2.5-flash",
             }
-            effective_model = OPENROUTER_MODEL_MAP.get(model, model) or "deepseek/deepseek-r1"
+            effective_model = OPENROUTER_MODEL_MAP.get(model, model) or "google/gemini-2.5-flash"
 
             payload = {
                 "model": effective_model,

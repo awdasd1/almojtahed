@@ -799,6 +799,27 @@
                                     </div>
                                 </div>
 
+                                <div class="form-group"
+                                    style="background: rgba(147, 51, 234, 0.05); padding: 0.6rem; border-radius: var(--radius-sm); border: 1px solid rgba(147, 51, 234, 0.2); margin-top: 0.5rem;">
+                                    <label for="aiHelperModelSelect" style="font-size: 0.78rem; color: #c084fc; font-weight: 700; display: block; margin-bottom: 0.3rem;">
+                                        ⚡ نموذج المهام المساعدة السريعة (الصياغة والتخطيط التكميلي):
+                                    </label>
+                                    <select id="aiHelperModelSelect" class="filter-select w-100"
+                                        onchange="saveAiSettings()"
+                                        style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+                                        <option value="google/gemini-2.5-flash" selected>Google Gemini 2.5 Flash (فائق السرعة - ثانيتان - موصى به)</option>
+                                        <option value="google/gemini-2.5-flash-lite">Google Gemini 2.5 Flash Lite (خفيف وفوري)</option>
+                                        <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini (سريع وخفيف)</option>
+                                        <option value="qwen/qwen-2.5-7b-instruct">Qwen 2.5 7B Instruct (سريع وممتاز عربياً)</option>
+                                        <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
+                                        <option value="same_as_main">نفس النموذج الأساسي المختار للمحادثة</option>
+                                    </select>
+                                    <small
+                                        style="display: block; margin-top: 0.25rem; color: #94a3b8; font-size: 0.72rem;">
+                                        يُستخدم لتعديل السؤال والتخطيط التكميلي بسرعة فائقة ومستقلة لتفادي بطء المحادثة وتعطل أدوات التحقيق.
+                                    </small>
+                                </div>
+
                                 <div class="form-group">
                                     <label for="aiRagLimitSelect">عدد صفحات وسياقات الشاملة:</label>
                                     <select id="aiRagLimitSelect" class="filter-select w-100"

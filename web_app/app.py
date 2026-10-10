@@ -1339,6 +1339,8 @@ class AIChatRequest(BaseModel):
     category_id: Optional[int] = None
     book_titles: Optional[List[str]] = None
     selected_books: Optional[List[str]] = None
+    helper_model: Optional[str] = "google/gemini-2.5-flash"
+    helper_provider: Optional[str] = None
     reformulate_query: Optional[bool] = True
     iterative_research: Optional[bool] = False
     max_research_hops: Optional[int] = 2
@@ -1471,14 +1473,20 @@ async def ai_chat(req: AIChatRequest):
                         break
                     
             if user_query:
-                # 1. تعديل وصياغة السؤال بالألفاظ التراثية وفق التوجيه المطلوب
+                # تحديد نموذج المهام المساعدة السريعة (إعادة الصياغة والبحث التكميلي)
+                effective_helper_model = (req.helper_model or "").strip()
+                if not effective_helper_model or effective_helper_model == "same_as_main":
+                    effective_helper_model = req.model.strip()
+                effective_helper_prov = (req.helper_provider or "").strip().lower() or effective_prov
+
+                # 1. تعديل وصياغة السؤال بالألفاظ التراثية بالنموذج المساعد السريع
                 search_query = user_query
                 if req.reformulate_query:
                     try:
                         search_query = await reformulate_fiqh_query(
-                            provider=req.provider,
+                            provider=effective_helper_prov,
                             api_key=effective_key,
-                            model=req.model.strip(),
+                            model=effective_helper_model,
                             user_query=user_query,
                             system_prompt=req.system_prompt or "",
                             base_url=effective_base_url
@@ -1502,7 +1510,7 @@ async def ai_chat(req: AIChatRequest):
                 search_res = await search(search_req)
                 sources = search_res.get("results", [])
 
-                # 3. خيار البحث التكميلي الذكي (تحقيق متعدد الجولات لسد العجز والنقص وتخريج الأحاديث)
+                # 3. خيار البحث التكميلي الذكي بالنموذج المساعد السريع
                 if req.iterative_research and sources:
                     max_hops = min(3, max(1, req.max_research_hops or 2))
                     seen_signatures = {
@@ -1512,9 +1520,9 @@ async def ai_chat(req: AIChatRequest):
 
                     for hop in range(1, max_hops + 1):
                         plan = await plan_supplementary_searches(
-                            provider=req.provider,
+                            provider=effective_helper_prov,
                             api_key=effective_key,
-                            model=req.model.strip(),
+                            model=effective_helper_model,
                             user_query=user_query,
                             sources=sources,
                             system_prompt=req.system_prompt or "",

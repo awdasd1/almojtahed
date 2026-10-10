@@ -992,12 +992,12 @@ const AI_SETTINGS_STORAGE_KEY = "shamela_ai_dashboard_settings_v1";
 // النماذج الافتراضية لكل مزود
 const DEFAULT_PROVIDER_MODELS = {
     "openrouter": [
-        { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet (موصى به للتحقيق)" },
+        { id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash (فائق السرعة - موصى به)" },
+        { id: "anthropic/claude-sonnet-4.5", name: "Claude Sonnet 4.5 (تحقيق وتأصيل علمي)" },
         { id: "deepseek/deepseek-r1", name: "DeepSeek R1 (تفكير استدلالي عالي الدقة)" },
         { id: "openai/gpt-4o", name: "OpenAI GPT-4o (شامل ومتعدد الوسائط)" },
+        { id: "qwen/qwen-2.5-72b-instruct", name: "Qwen 2.5 72B Instruct (متفوق عربياً)" },
         { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B Instruct" },
-        { id: "google/gemini-2.0-flash-exp:free", name: "Gemini 2.0 Flash (Free)" },
-        { id: "google/gemini-pro-1.5", name: "Gemini 1.5 Pro" },
         { id: "mistralai/mistral-large-2411", name: "Mistral Large" }
     ],
     "openai": [
@@ -1129,6 +1129,7 @@ function saveAiSettings() {
         api_key: document.getElementById("aiApiKeyInput")?.value || "",
         model: document.getElementById("aiModelSelect")?.value || "",
         custom_model: document.getElementById("aiCustomModelInput")?.value || "",
+        helper_model: document.getElementById("aiHelperModelSelect")?.value || "google/gemini-2.5-flash",
         rag_enabled: document.getElementById("aiRagEnabled")?.checked ?? true,
         reformulate_query: document.getElementById("aiReformulateQuery")?.checked ?? true,
         iterative_research: document.getElementById("aiIterativeResearch")?.checked ?? true,
@@ -1461,6 +1462,11 @@ function loadAiSettings() {
         maxHopsSelect.value = s.max_research_hops;
     }
     toggleIterativeHops();
+
+    const helperModelEl = document.getElementById("aiHelperModelSelect");
+    if (helperModelEl && s.helper_model) {
+        helperModelEl.value = s.helper_model;
+    }
 
     const ragLimitSelect = document.getElementById("aiRagLimitSelect");
     if (ragLimitSelect && s.rag_limit) ragLimitSelect.value = s.rag_limit;
@@ -2651,6 +2657,7 @@ async function handleAiChatSubmit(e) {
                 category_id: catId ? parseInt(catId) : null,
                 book_titles: Array.from(selectedBookTitles),
                 selected_books: Array.from(selectedBookTitles),
+                helper_model: document.getElementById("aiHelperModelSelect")?.value || "google/gemini-2.5-flash",
                 reformulate_query: reformulateEnabled,
                 iterative_research: iterativeEnabled,
                 max_research_hops: maxHops,
@@ -4266,10 +4273,10 @@ let pipelineGapFillEnabled = true;
 
 // النماذج المقترحة الأساسية المثبتة في صدارة القائمة
 const PRIMARY_RECOMMENDED_MODELS = [
-    { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", comp: "anthropic", context: "200k", desc: "الأقوى في التحقيق والتأصيل وصياغة العزو والمقارنات", badge: "موصى به" },
+    { id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash", comp: "google", context: "1M+", desc: "سرعة فائقة واستجابة فورية للتحقيق الفقهي ومحطة MCP", badge: "موصى به" },
+    { id: "anthropic/claude-sonnet-4.5", name: "Claude Sonnet 4.5", comp: "anthropic", context: "200k", desc: "الأقوى في التحقيق والتأصيل وصياغة العزو والمقارنات", badge: "تحقيق متقدم" },
     { id: "deepseek/deepseek-r1", name: "DeepSeek R1 (Reasoning)", comp: "deepseek", context: "128k", desc: "نموذج التفكير المنطقي الفائق واستخراج العلل والاستدلال", badge: "تفكير واستدلال" },
     { id: "openai/gpt-4o", name: "GPT-4o Omnimodel", comp: "openai", context: "128k", desc: "نموذج شامل ودقيق في الربط والاستخلاص وتنسيق المخرجات", badge: "شامل متقدم" },
-    { id: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash", comp: "google", context: "1M+", desc: "سياق عملاق يتسع لمئات صفحات كتب التراث دفعة واحدة", badge: "سياق ضخم" },
     { id: "qwen/qwen-2.5-72b-instruct", name: "Qwen 2.5 72B Instruct", comp: "qwen", context: "128k", desc: "أصالة وبراعة عالية جداً في نصوص اللغة والحديث والشعر", badge: "متفوق عربياً" },
     { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B Instruct", comp: "meta", context: "128k", desc: "سرعة ودقة عالية في الفرز والتصنيف والاستخلاص", badge: "دقة وسرعة" },
     { id: "mistralai/mistral-large-2411", name: "Mistral Large", comp: "mistral", context: "128k", desc: "أداء ممتاز في الاستدلال وتحليل النصوص المعقدة", badge: "تحليل واستدلال" },
