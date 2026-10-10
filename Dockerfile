@@ -31,7 +31,7 @@ COPY shamela_mcp.py ./shamela_mcp.py
 COPY entrypoint.sh ./entrypoint.sh
 COPY shamela_index.db ./shamela_index.db
 COPY shamela4_data/_meta/ ./shamela4_data/_meta/
-COPY "mcp web/" "./mcp web/"
+COPY ["mcp web/", "./mcp web/"]
 
 RUN chmod +x ./entrypoint.sh
 
