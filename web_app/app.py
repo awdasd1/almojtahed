@@ -1637,9 +1637,15 @@ async def ai_chat(req: AIChatRequest):
     except Exception as e:
         import traceback
         traceback.print_exc()
+        err_msg = str(e)
+        if "timed out" in err_msg.lower() or "timeout" in err_msg.lower():
+            if effective_prov in ("ollama", "lmstudio", "local"):
+                err_msg = f"انتهت مهلة محاولة الاتصال بالخادم المحلي ({effective_base_url or '192.168.100.134:1234'}). إذا كان التطبيق يعمل على سيرفر سحابي (Coolify)، فلا يمكنه الوصول إلى الشبكة المنزلية أو جهازك المنزلي دون نفق عام (Tunnel). يرجى اختيار مزود سحابي مثل OpenRouter أو Gemini."
+            else:
+                err_msg = f"انتهت مهلة استجابة مزود الذكاء الاصطناعي ({effective_prov}). يرجى التحقق من مفتاح API أو اختيار نموذج أسرع."
         return JSONResponse(
             status_code=400,
-            content={"status": "error", "detail": str(e), "message": str(e)}
+            content={"status": "error", "detail": err_msg, "message": err_msg}
         )
 
 @app.post("/api/export/docx")
