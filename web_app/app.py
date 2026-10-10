@@ -727,8 +727,9 @@ async def get_books(category_id: Optional[int] = None, q: Optional[str] = None, 
         "rel_path": r[6]
     } for r in rows]
 
-@app.post("/api/search")
-async def search(req: SearchRequest):
+def execute_search_sync(req: Union[SearchRequest, Dict[str, Any]]) -> Dict[str, Any]:
+    if isinstance(req, dict):
+        req = SearchRequest(**req)
     t0 = time.time()
     query = req.query.strip()
     if not query:
@@ -1128,6 +1129,10 @@ async def search(req: SearchRequest):
         "total": len(enriched),
         "results": enriched
     }
+
+@app.post("/api/search")
+async def search(req: SearchRequest):
+    return execute_search_sync(req)
 
 @app.get("/api/page")
 async def get_page(
@@ -1551,22 +1556,37 @@ async def ai_chat(req: AIChatRequest):
                     m_narrator = re.search(r'(?:ترجمة|راوي|الراوي|عن)\s+([^\d\n،,]{3,35})', mcp_query)
                     if m_narrator: cand = m_narrator.group(1).strip()
                     narr_res = execute_tool("search_narrators", {"query": cand, "limit": min(limit_val, 50)})
-                    if narr_res and "result" in narr_res and narr_res["result"].get("narrators"):
-                        narr_list = narr_res["result"]["narrators"]
+                    res_val = narr_res.get("result") if isinstance(narr_res, dict) else None
+                    narr_list = []
+                    if isinstance(res_val, list):
+                        narr_list = res_val
+                    elif isinstance(res_val, dict):
+                        narr_list = res_val.get("narrators") or res_val.get("results") or []
+                    if narr_list:
                         part_txt = f"=== أداة MCP: تراجم الرواة والجرح والتعديل ({cand}) ===\n"
                         for k, nr in enumerate(narr_list[:limit_val]):
-                            part_txt += f"[{k+1}] الاسم: {nr.get('name', '')} | الرتبة: {nr.get('grade', '')} | الطبقة: {nr.get('generation', '')} | الوفاة: {nr.get('death_year', '')}\n"
+                            part_txt += f"[{k+1}] الاسم: {nr.get('short_name') or nr.get('name', '')} | الرتبة: {nr.get('ibn_hajar_rank') or nr.get('grade', '')} | الطبقة: {nr.get('generation', '')}\n"
                         mcp_context_parts.append(part_txt)
 
                 # أداة تحرير المذاهب (tahrir_madhab)
                 if "tahrir_madhab" in active_tools and any(w in norm_q for w in ["مذهب", "مذاهب", "فقه", "حنفية", "شافعية", "مالكية", "حنابلة", "حكم", "يجوز", "حرام"]):
                     madhab_res = execute_tool("tahrir_madhab", {"issue": mcp_query, "limit": min(limit_val, 50)})
-                    if madhab_res and "result" in madhab_res and madhab_res["result"].get("madhab_comparison"):
-                        comps = madhab_res["result"]["madhab_comparison"]
-                        part_txt = f"=== أداة MCP: تحرير أقوال المذاهب الفقهية ===\n"
-                        for m_name, m_data in comps.items():
-                            part_txt += f"- مذهب {m_name}: المعتمد ({m_data.get('standard_verdict', '')}) | الأدلة والمصادر: {m_data.get('sources_count', 0)} مصدر\n"
-                        mcp_context_parts.append(part_txt)
+                    if madhab_res and "result" in madhab_res:
+                        m_res = madhab_res["result"]
+                        if isinstance(m_res, dict):
+                            comps = m_res.get("madhab_comparison")
+                            recs = m_res.get("recommended_references") or []
+                            part_txt = f"=== أداة MCP: تحرير المسائل والمذاهب الفقهية ({m_res.get('madhab', 'المذاهب الأربعة')}) ===\n"
+                            if m_res.get("tahrir_guideline"):
+                                part_txt += f"ضابط التحرير: {m_res['tahrir_guideline']}\n"
+                            if comps and isinstance(comps, dict):
+                                for m_name, m_data in comps.items():
+                                    part_txt += f"- مذهب {m_name}: المعتمد ({m_data.get('standard_verdict', '')}) | الأدلة والمصادر: {m_data.get('sources_count', 0)} مصدر\n"
+                            elif recs:
+                                part_txt += "المراجع المعتمدة للتحرير:\n"
+                                for k, bk in enumerate(recs[:10]):
+                                    part_txt += f"[{k+1}] {bk.get('title', '')} ({bk.get('category', '')}) - {bk.get('era_label', '')} (وفاة المؤلف: {bk.get('author_death_hijri', '')}هـ)\n"
+                            mcp_context_parts.append(part_txt)
 
         combined_context_block = ""
         if sources:
@@ -2402,8 +2422,10 @@ from web_app.mcp_service import (
     MCP_TOOLS_SPEC, execute_tool, search_narrators,
     takhrij_hadith, search_quran_and_tafsir, tahrir_madhab,
     lookup_word_root, get_narrator_isnads, get_all_mcp_tools,
-    load_custom_mcp_tools, save_custom_mcp_tools
+    load_custom_mcp_tools, save_custom_mcp_tools,
+    set_direct_search_callable
 )
+set_direct_search_callable(execute_search_sync)
 
 try:
     _mcp_sse_app = mcp_server.sse_app()

@@ -18,6 +18,7 @@ import urllib.parse
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
 
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
 from mcp.server.mcpserver import MCPServer
@@ -26,6 +27,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("SHAMELA_DATA_DIR", str(BASE_DIR / "shamela4_data")))
 META_DIR = Path(os.environ.get("SHAMELA_META_DIR", str(DATA_DIR / "_meta")))
 DB_PATH = Path(os.environ.get("SHAMELA_INDEX_DB", str(BASE_DIR / "shamela_index.db")))
+
+# Direct in-memory search callable to prevent self-referential loopback HTTP deadlocks
+_DIRECT_SEARCH_CALLABLE = None
+
+def set_direct_search_callable(fn):
+    global _DIRECT_SEARCH_CALLABLE
+    _DIRECT_SEARCH_CALLABLE = fn
 
 # Cache tables in memory on demand for ultra-fast response
 _CACHED_TABLES: Dict[str, Any] = {}
@@ -208,20 +216,26 @@ def search_shamela_text(
 
     results = []
     mode = "Hybrid Qdrant"
+    raw_results = []
     try:
-        req_data = json.dumps(payload).encode("utf-8")
-        internal_port = os.environ.get("PORT", "8000")
-        internal_host = os.environ.get("LOCAL_API_HOST", f"127.0.0.1:{internal_port}")
-        search_api_url = f"http://{internal_host}/api/search"
-        req = urllib.request.Request(
-            search_api_url,
-            data=req_data,
-            headers={"Content-Type": "application/json"}
-        )
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        if _DIRECT_SEARCH_CALLABLE is not None:
+            data = _DIRECT_SEARCH_CALLABLE(payload)
             mode = data.get("mode", mode)
             raw_results = data.get("results", [])
+        else:
+            req_data = json.dumps(payload).encode("utf-8")
+            internal_port = os.environ.get("PORT", "8000")
+            internal_host = os.environ.get("LOCAL_API_HOST", f"127.0.0.1:{internal_port}")
+            search_api_url = f"http://{internal_host}/api/search"
+            req = urllib.request.Request(
+                search_api_url,
+                data=req_data,
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                mode = data.get("mode", mode)
+                raw_results = data.get("results", [])
 
             # 1. تطبيق خوارزمية تنويع الكتب (Book Diversity Re-ranking)
             if book_diversity and raw_results:
@@ -1202,7 +1216,7 @@ def tahrir_madhab(issue: str, madhab: str = "all", era: str = "all", limit: int 
                 filtered_b = b_table.filter(mask).to_pylist()
             else:
                 fiqh_cats = [14, 15, 16, 17, 18, 19, 22]
-                mask = pc.is_in(b_table["category_id"], value_set=fiqh_cats)
+                mask = pc.is_in(b_table["category_id"], value_set=pa.array(fiqh_cats))
                 filtered_b = b_table.filter(mask).to_pylist()
 
             for bk in filtered_b:
