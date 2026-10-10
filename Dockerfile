@@ -30,11 +30,13 @@ COPY config.json ./config.json
 COPY shamela_mcp.py ./shamela_mcp.py
 COPY entrypoint.sh ./entrypoint.sh
 COPY shamela_index.db ./shamela_index.db
+COPY shamela4_data/_meta/ ./shamela4_data/_meta/
+COPY "mcp web/" "./mcp web/"
 
 RUN chmod +x ./entrypoint.sh
 
-# Expose web application ports
-EXPOSE 8000 3000
+# Expose web application and Claude Web ports
+EXPOSE 8000 3000 5173
 
 # Health check with generous start-period for PyTorch / model initialization
 HEALTHCHECK --interval=10s --timeout=5s --start-period=120s --retries=10 \

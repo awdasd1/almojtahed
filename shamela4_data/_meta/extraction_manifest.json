@@ -1,0 +1,22 @@
+{
+  "snapshot_id": "shamela4_full_extraction_pg_2026_04_26",
+  "extracted_at": "2026-04-26T20:41:36.113769Z",
+  "extractor_version": "0.3.0",
+  "filter": {
+    "limit": null,
+    "book_ids": null,
+    "category_id": null
+  },
+  "book_count": 8589,
+  "page_count": 7611186,
+  "toc_count": 4060485,
+  "isnad_count": 35526,
+  "author_count": 3187,
+  "category_count": 41,
+  "root_dictionary_count": 1952803,
+  "narrator_count": 18989,
+  "quran_verse_count": 6236,
+  "tafsir_xref_count": 84430,
+  "hadith_xref_count": 37076,
+  "rejected_books": []
+}

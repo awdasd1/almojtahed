@@ -41,7 +41,9 @@ qdrant_bin
 
 # Models & Data
 models
-shamela4_data
+shamela4_data/*
+!shamela4_data/_meta/
+shamela4_data/_meta/*.jsonl
 
 # OS & Logs
 .DS_Store

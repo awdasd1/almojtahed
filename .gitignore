@@ -61,9 +61,11 @@ saved_keys.json
 .env.*
 !.env.example
 
-# Local Model Weights & Data Folders
+# Local Model Weights & Data Folders (Exclude giant raw texts, keep lightweight _meta parquet for MCP)
 models/
-shamela4_data/
+shamela4_data/*
+!shamela4_data/_meta/
+shamela4_data/_meta/*.jsonl
 
 # OS & Editor Files
 .DS_Store

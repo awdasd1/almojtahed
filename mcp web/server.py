@@ -675,9 +675,10 @@ class ClaudeAppHandler(SimpleHTTPRequestHandler):
                         rag_payload["agent_id"] = agent_id_param
 
                     rag_req_data = json.dumps(rag_payload).encode("utf-8")
-                    
+                    shamela_port = os.environ.get("PORT", "8000")
+                    shamela_api_url = os.environ.get("SHAMELA_API_URL", f"http://127.0.0.1:{shamela_port}/api/ai/agent/query")
                     r_req = urllib.request.Request(
-                        "http://localhost:8000/api/ai/agent/query",
+                        shamela_api_url,
                         data=rag_req_data,
                         headers={"Content-Type": "application/json"},
                         method="POST"

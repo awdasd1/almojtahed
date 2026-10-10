@@ -12,6 +12,7 @@ let allBooksCache = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     initTheme();
+    initDynamicEndpoints();
     loadStats();
     loadCategories();
     setupEventListeners();
@@ -21,6 +22,35 @@ document.addEventListener("DOMContentLoaded", () => {
     initAssistants();
     initCustomMcpTools();
 });
+
+// التعرف الديناميكي على روابط الخدمات (Claude Web، Qdrant، السيرفرات السحابية والمحلية)
+async function initDynamicEndpoints() {
+    try {
+        const btnClaude = document.getElementById("btnClaudeWebExt");
+        const btnQdrant = document.getElementById("btnQdrantDashboardExt");
+        
+        const hostName = window.location.hostname || "localhost";
+        const proto = window.location.protocol || "http:";
+        
+        if (hostName !== "localhost" && hostName !== "127.0.0.1") {
+            if (btnClaude) btnClaude.href = `${proto}//${hostName}:5173`;
+            if (btnQdrant) btnQdrant.href = `http://${hostName}:6333/dashboard`;
+        }
+        
+        const res = await fetch("/api/system/endpoints");
+        if (res.ok) {
+            const data = await res.json();
+            if (data.claude_web_url && btnClaude) {
+                btnClaude.href = data.claude_web_url;
+            }
+            if (data.qdrant_dashboard_url && btnQdrant) {
+                btnQdrant.href = data.qdrant_dashboard_url;
+            }
+        }
+    } catch (e) {
+        console.warn("Dynamic endpoints init warning:", e);
+    }
+}
 
 // إدارة الثيمات تتم عبر theme_manager.js
 

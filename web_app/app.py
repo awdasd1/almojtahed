@@ -2180,13 +2180,11 @@ from web_app.mcp_service import (
 try:
     _mcp_sse_app = mcp_server.sse_app()
     app.mount("/mcp", _mcp_sse_app)
+    # Register /sse and /messages natively at root level for universal MCP client compatibility
+    for _r in getattr(_mcp_sse_app, "routes", []):
+        app.router.routes.append(_r)
 except Exception as _e:
     print(f"Error mounting MCP SSE app: {_e}")
-
-@app.get("/sse")
-def redirect_to_mcp_sse():
-    from starlette.responses import RedirectResponse
-    return RedirectResponse(url="/mcp/sse")
 
 class MCPExecuteRequest(BaseModel):
     tool: Optional[str] = None
@@ -2304,13 +2302,55 @@ def run_mcp_tool(req: MCPExecuteRequest):
     tool_target = req.tool or req.tool_name or ""
     return execute_tool(tool_target, req.arguments or {}, dynamic_spec=req.custom_tool_spec)
 
+@app.get("/api/system/endpoints")
+def get_system_endpoints(request: Request):
+    """التعرف الديناميكي على عناوين ومنافذ الخدمات (Claude Web، Qdrant، MCP) وفقاً للبيئة والدومين"""
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+    hostname = host.split(":")[0]
+    
+    claude_web_url = os.environ.get("CLAUDE_WEB_URL", "")
+    if not claude_web_url:
+        if hostname in ("localhost", "127.0.0.1"):
+            claude_web_url = "http://localhost:5173"
+        else:
+            claude_web_url = f"{proto}://{hostname}:5173"
+
+    qdrant_url = os.environ.get("QDRANT_DASHBOARD_URL", os.environ.get("QDRANT_PUBLIC_URL", ""))
+    if not qdrant_url:
+        if hostname in ("localhost", "127.0.0.1"):
+            qdrant_url = "http://localhost:6333/dashboard"
+        else:
+            qdrant_url = f"http://{hostname}:6333/dashboard"
+            
+    return {
+        "claude_web_url": claude_web_url,
+        "qdrant_dashboard_url": qdrant_url,
+        "mcp_sse_url": f"{proto}://{host}/sse",
+        "api_base_url": f"{proto}://{host}"
+    }
+
 @app.get("/api/mcp/config")
-def get_mcp_config():
-    """توليد إعدادات جاهزة لـ Claude Desktop و Cursor للربط المباشر"""
+def get_mcp_config(request: Request):
+    """توليد إعدادات جاهزة لـ Claude Desktop و Cursor للربط المباشر مع دعم الدومين والآي بي الديناميكي"""
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+    base_url = f"{proto}://{host}".rstrip("/")
+
+    mcp_sse_url = f"{base_url}/sse"
     python_path = str(BASE_DIR / ".venv" / "bin" / "python")
     server_script = str(BASE_DIR / "shamela_mcp.py")
     
-    claude_config = {
+    # Remote HTTP SSE config (لربط Claude Desktop و LibreChat و Cursor عبر الرابط السحابي المباشر)
+    remote_claude_config = {
+        "mcpServers": {
+            "shamela-scholarly": {
+                "url": mcp_sse_url
+            }
+        }
+    }
+
+    local_claude_config = {
         "mcpServers": {
             "shamela-scholarly": {
                 "command": python_path,
@@ -2325,16 +2365,16 @@ def get_mcp_config():
     cursor_config = {
         "mcpServers": {
             "shamela-scholarly": {
-                "command": python_path,
-                "args": [server_script]
+                "url": mcp_sse_url
             }
         }
     }
     
     return {
-        "mcp_url": "http://localhost:8000/mcp/sse",
-        "sse_url": "http://localhost:8000/mcp/sse",
-        "claude_desktop": json.dumps(claude_config, indent=2, ensure_ascii=False),
+        "mcp_url": mcp_sse_url,
+        "sse_url": mcp_sse_url,
+        "claude_desktop": json.dumps(remote_claude_config, indent=2, ensure_ascii=False),
+        "claude_desktop_local": json.dumps(local_claude_config, indent=2, ensure_ascii=False),
         "cursor": json.dumps(cursor_config, indent=2, ensure_ascii=False),
         "python_path": python_path,
         "server_script": server_script

@@ -23,9 +23,9 @@ import pyarrow.compute as pc
 from mcp.server.mcpserver import MCPServer
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-META_DIR = BASE_DIR / "shamela4_data" / "_meta"
-DATA_DIR = BASE_DIR / "shamela4_data"
-DB_PATH = BASE_DIR / "shamela_index.db"
+DATA_DIR = Path(os.environ.get("SHAMELA_DATA_DIR", str(BASE_DIR / "shamela4_data")))
+META_DIR = Path(os.environ.get("SHAMELA_META_DIR", str(DATA_DIR / "_meta")))
+DB_PATH = Path(os.environ.get("SHAMELA_INDEX_DB", str(BASE_DIR / "shamela_index.db")))
 
 # Cache tables in memory on demand for ultra-fast response
 _CACHED_TABLES: Dict[str, Any] = {}
@@ -210,8 +210,11 @@ def search_shamela_text(
     mode = "Hybrid Qdrant"
     try:
         req_data = json.dumps(payload).encode("utf-8")
+        internal_port = os.environ.get("PORT", "8000")
+        internal_host = os.environ.get("LOCAL_API_HOST", f"127.0.0.1:{internal_port}")
+        search_api_url = f"http://{internal_host}/api/search"
         req = urllib.request.Request(
-            "http://localhost:8000/api/search",
+            search_api_url,
             data=req_data,
             headers={"Content-Type": "application/json"}
         )

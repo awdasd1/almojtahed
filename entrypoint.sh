@@ -58,6 +58,12 @@ if [ -n "$QDRANT_URL" ]; then
     fi
 fi
 
+# 3. Launch Claude Desktop Web Server in background on port 5173
+if [ -f "mcp web/server.py" ]; then
+    echo "💬 Starting Claude Desktop Web (User End) on port 5173..."
+    python3 "mcp web/server.py" > /tmp/claude_web.log 2>&1 &
+fi
+
 APP_PORT="${PORT:-8000}"
 echo "🚀 Launching FastAPI Uvicorn Server on 0.0.0.0:$APP_PORT..."
 exec uvicorn web_app.app:app --host 0.0.0.0 --port "$APP_PORT" --workers "${WEB_CONCURRENCY:-1}"
