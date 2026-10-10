@@ -208,14 +208,26 @@ def create_resilient_qdrant_client() -> QdrantClient:
     return QdrantClient(url=fallback, check_compatibility=False)
 
 def get_badr_model():
-    """الحصول على نموذج تضمين بدر، مع تحميله عند الطلب إذا لم يكن محملاً"""
+    """الحصول على نموذج تضمين بدر (768 أبعاد) مع دعم التنزيل المباشر بدون توكن"""
     if state.get("badr_model") is None:
+        # محاولة 1: تحميل مباشر بدون توكن (نموذج عام ومجاني ومخزن محلياً)
         try:
-            print(f"⏳ Loading {BADR_MODEL_ID} embedding model...")
-            state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, token=BADR_HF_TOKEN, device=state["device"])
+            print(f"⏳ Loading {BADR_MODEL_ID} embedding model (anonymous)...")
+            state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, device="cpu")
             print("✅ Badr Embedding Model loaded successfully!")
+            return state["badr_model"]
         except Exception as be:
-            print(f"⚠️ Error loading Badr embedding model: {be}")
+            print(f"⚠️ Direct anonymous load of {BADR_MODEL_ID} failed: {be}")
+
+        # محاولة 2: بالتوكن إذا تم توفيره وكان صالحاً
+        if BADR_HF_TOKEN and not BADR_HF_TOKEN.startswith("hf_..."):
+            try:
+                print(f"⏳ Retrying {BADR_MODEL_ID} with HF_TOKEN...")
+                state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, token=BADR_HF_TOKEN, device="cpu")
+                print("✅ Badr Embedding Model loaded successfully with token!")
+                return state["badr_model"]
+            except Exception as be2:
+                print(f"⚠️ Token load of {BADR_MODEL_ID} failed: {be2}")
     return state.get("badr_model")
 
 def get_bm25_model():
@@ -632,18 +644,22 @@ async def search(req: SearchRequest):
             raise q_err
 
     target_coll = req.collection_name or BADR_ALL_TSH_COLLECTION_NAME
-    badr_model = get_badr_model()
-    if badr_model:
-        if target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME, COLLECTION_NAME, "badr_all_tsh_colc"):
-            target_coll = BADR_ALL_TSH_COLLECTION_NAME
-    elif target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME):
-        target_coll = COLLECTION_NAME
+    # توجيه جميع استعلامات الشاملة التراثية إلى مجموعة بدر badr_all_tsh_corpus (768 أبعاد)
+    is_badr_target = target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME, COLLECTION_NAME, "badr_all_tsh_colc")
+    if is_badr_target:
+        target_coll = BADR_ALL_TSH_COLLECTION_NAME
         
     final_limit = req.reranker_limit if (req.use_reranker and req.reranker_limit) else req.limit
     fetch_limit = min(max(req.limit, final_limit * 3, 30), 200) if req.use_reranker else req.limit
     
     # ===================== مسار 1: لقطات بدر (badr_all_tsh_corpus الهجين، badr_corpus، badr_tch_corpus) =====================
-    if target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME) and badr_model:
+    if is_badr_target or target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME):
+        badr_model = get_badr_model()
+        if not badr_model:
+            raise HTTPException(
+                status_code=503,
+                detail="نموذج التضمين (Badr Embedding 768) جارٍ تحميله حالياً في الذاكرة. يرجى الانتظار بضع ثوانٍ وإعادة المحاولة."
+            )
         t_enc0 = time.time()
         enc_query = normalize_arabic(query) if target_coll == BADR_TCH_COLLECTION_NAME else query
         dense_vec = badr_model.encode(enc_query).tolist()
