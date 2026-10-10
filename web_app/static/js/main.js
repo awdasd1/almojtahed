@@ -2645,7 +2645,7 @@ async function handleAiChatSubmit(e) {
                 system_prompt: document.getElementById("aiSystemPrompt").value.trim(),
                 temperature: parseFloat(document.getElementById("aiTemperature").value) || 0.3,
                 repetition_penalty: parseFloat(document.getElementById("aiRepPenalty").value) || 0.0,
-                max_tokens: parseInt(document.getElementById("aiMaxTokens").value) || 6000,
+                max_tokens: Math.min(parseInt(document.getElementById("aiMaxTokens").value) || 2500, 3500),
                 structured_format: structuredFormat || null,
                 structured_output: structuredFormat || null,
                 rag_enabled: ragEnabled,
@@ -2665,7 +2665,7 @@ async function handleAiChatSubmit(e) {
                 reranker_model: document.getElementById("aiRerankerModelSelect")?.value || "BAAI/bge-reranker-v2-m3",
                 reranker_limit: parseInt(document.getElementById("aiRerankerLimitSelect")?.value) || 10,
                 // معلمات أدوات التحقيق الشرعي (MCP)
-                mcp_enabled: document.getElementById("aiMcpEnabled")?.checked ?? true,
+                mcp_enabled: (document.getElementById("aiMcpEnabled")?.checked || document.getElementById("aiQuickMcp")?.checked) ?? true,
                 mcp_mode: document.getElementById("aiMcpModeSelect")?.value || "autonomous",
                 mcp_reformulate: document.getElementById("aiMcpReformulateQuery")?.checked ?? true,
                 mcp_iterative: document.getElementById("aiMcpIterativeResearch")?.checked ?? true,

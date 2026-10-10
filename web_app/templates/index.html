@@ -421,7 +421,7 @@
                                 </label>
                                 <label class="quick-toggle-pill"
                                     title="تفعيل البحث التكميلي الذكي: يعيد النموذج البحث تلقائياً بالألفاظ التي يحددها إذا وجد نقصاً في المذاهب أو حاجة لتخريج الأحاديث">
-                                    <input type="checkbox" id="aiQuickIterative" checked
+                                    <input type="checkbox" id="aiQuickIterative"
                                         onchange="syncIterativeQuickToggle(this.checked)">
                                     <span>🔄 بحث تكميلي ذكي</span>
                                 </label>
@@ -1266,14 +1266,14 @@
 
                                 <div class="form-group">
                                     <label for="aiMaxTokens">الحد الأقصى لرموز التوليد (Max Tokens):</label>
-                                    <input type="number" id="aiMaxTokens" class="filter-select w-100" value="8000"
-                                        min="500" max="64000" step="1000"
+                                    <input type="number" id="aiMaxTokens" class="filter-select w-100" value="2500"
+                                        min="500" max="16000" step="500"
                                         title="الحد الأقصى لرموز الإجابة المخرجة (مع سياق مدخلات مفتوح حتى مليون رمز)"
                                         oninput="saveAiSettings()">
                                     <small
                                         style="color: #64748b; font-size: 0.74rem; margin-top: 2px; display: block;">سياق
                                         المدخلات مدعوم حتى ١,٠٠٠,٠٠٠ رمز دون بتر. هذا الحقل يحدد سقف الرد المولد (موصى
-                                        به 8000 إلى 16000).</small>
+                                        به 2000 إلى 3000 للاستجابة السريعة وتفادي انتهاء مهلة السيرفر).</small>
                                 </div>
                             </div>
                         </div>

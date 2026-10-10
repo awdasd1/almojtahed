@@ -1618,7 +1618,7 @@ async def ai_chat(req: AIChatRequest):
                         break
             
             if mcp_query:
-                limit_val = max(1, min(int(req.mcp_limit or 20), 1000))
+                limit_val = max(1, min(int(req.mcp_limit or 10), 50))
                 active_tools = req.mcp_active_tools or [
                     "get_narrator_isnads", "takhrij_hadith", "search_narrators",
                     "tahrir_madhab", "search_shamela_text", "search_quran_and_tafsir",
@@ -1626,84 +1626,135 @@ async def ai_chat(req: AIChatRequest):
                 ]
                 norm_q = mcp_query.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
                 
-                # أداة الأسانيد (get_narrator_isnads)
+                # 1. أداة الأسانيد (get_narrator_isnads)
                 if "get_narrator_isnads" in active_tools and any(w in norm_q for w in ["سند", "اسناد", "اسانيد", "طريق", "سفيان", "احمد بن حنبل", "مالك بن انس", "شعبة"]):
-                    narrator_cand = None
-                    m_narrator = re.search(r'(?:راوي|الراوي|سنده|في سنده|عن|طريق)\s+([^\d\n،,]{3,35})', mcp_query)
-                    if m_narrator:
-                        narrator_cand = m_narrator.group(1).strip()
-                    else:
-                        for known in ["سفيان الثوري", "أحمد بن حنبل", "مالك بن أنس", "الشافعي", "شعبة بن الحجاج", "سفيان بن عيينة", "الأعمش", "الزهري", "قتادة", "نافع"]:
-                            if known in mcp_query:
-                                narrator_cand = known
-                                break
-                    if not narrator_cand:
-                        narrator_cand = mcp_query.split()[0] if mcp_query else "سفيان الثوري"
-                    
-                    isnad_res = execute_tool("get_narrator_isnads", {
-                        "narrator": narrator_cand,
-                        "limit": limit_val,
-                        "book_title": req.mcp_book_filter or None
-                    })
-                    if isnad_res and "result" in isnad_res:
-                        res_data = isnad_res["result"]
-                        isnads_list = res_data.get("isnads", [])
-                        if isnads_list:
-                            part_txt = f"=== أداة MCP: استخراج أسانيد الراوي ({res_data.get('narrator', narrator_cand)}) ===\n"
-                            part_txt += f"إجمالي الأسانيد بالمكتبة: {res_data.get('total_chains_in_db', len(isnads_list))} | الأسانيد المتصلة المستخرجة: {len(isnads_list)}\n"
-                            for k, isn in enumerate(isnads_list[:limit_val]):
-                                part_txt += f"[{k+1}] كتاب: {isn.get('book_title', 'الحديث')} (صـ {isn.get('page_num', '')}) | السند: {isn.get('chain_text', '')}\n"
-                            mcp_context_parts.append(part_txt)
+                    try:
+                        narrator_cand = None
+                        m_narrator = re.search(r'(?:راوي|الراوي|سنده|في سنده|عن|طريق)\s+([^\d\n،,]{3,35})', mcp_query)
+                        if m_narrator:
+                            narrator_cand = m_narrator.group(1).strip()
+                        else:
+                            for known in ["سفيان الثوري", "أحمد بن حنبل", "مالك بن أنس", "الشافعي", "شعبة بن الحجاج", "سفيان بن عيينة", "الأعمش", "الزهري", "قتادة", "نافع"]:
+                                if known in mcp_query:
+                                    narrator_cand = known
+                                    break
+                        if not narrator_cand:
+                            narrator_cand = mcp_query.split()[0] if mcp_query else "سفيان الثوري"
+                        
+                        isnad_res = execute_tool("get_narrator_isnads", {
+                            "narrator": narrator_cand,
+                            "limit": min(limit_val, 4),
+                            "book_title": req.mcp_book_filter or None
+                        })
+                        if isnad_res and "result" in isnad_res:
+                            res_data = isnad_res["result"]
+                            isnads_list = res_data.get("isnads", [])
+                            if isnads_list:
+                                part_txt = f"=== أداة MCP: استخراج أسانيد الراوي ({res_data.get('narrator', narrator_cand)}) ===\n"
+                                for k, isn in enumerate(isnads_list[:4]):
+                                    part_txt += f"[{k+1}] كتاب: {isn.get('book_title', 'الحديث')} (صـ {isn.get('page_num', '')}) | السند: {isn.get('chain_text', '')}\n"
+                                mcp_context_parts.append(part_txt)
+                    except Exception as err_isnad:
+                        print(f"MCP isnad error: {err_isnad}")
                 
-                # أداة التراجم (search_narrators)
+                # 2. أداة التراجم (search_narrators)
                 if "search_narrators" in active_tools and any(w in norm_q for w in ["ترجمة", "راوي", "الجرح والتعديل", "تعديل", "ثقة", "ضعيف", "طبقة"]):
-                    cand = mcp_query
-                    m_narrator = re.search(r'(?:ترجمة|راوي|الراوي|عن)\s+([^\d\n،,]{3,35})', mcp_query)
-                    if m_narrator: cand = m_narrator.group(1).strip()
-                    narr_res = execute_tool("search_narrators", {"query": cand, "limit": min(limit_val, 50)})
-                    res_val = narr_res.get("result") if isinstance(narr_res, dict) else None
-                    narr_list = []
-                    if isinstance(res_val, list):
-                        narr_list = res_val
-                    elif isinstance(res_val, dict):
-                        narr_list = res_val.get("narrators") or res_val.get("results") or []
-                    if narr_list:
-                        part_txt = f"=== أداة MCP: تراجم الرواة والجرح والتعديل ({cand}) ===\n"
-                        for k, nr in enumerate(narr_list[:limit_val]):
-                            part_txt += f"[{k+1}] الاسم: {nr.get('short_name') or nr.get('name', '')} | الرتبة: {nr.get('ibn_hajar_rank') or nr.get('grade', '')} | الطبقة: {nr.get('generation', '')}\n"
-                        mcp_context_parts.append(part_txt)
-
-                # أداة تحرير المذاهب (tahrir_madhab)
-                if "tahrir_madhab" in active_tools and any(w in norm_q for w in ["مذهب", "مذاهب", "فقه", "حنفية", "شافعية", "مالكية", "حنابلة", "حكم", "يجوز", "حرام"]):
-                    madhab_res = execute_tool("tahrir_madhab", {"issue": mcp_query, "limit": min(limit_val, 50)})
-                    if madhab_res and "result" in madhab_res:
-                        m_res = madhab_res["result"]
-                        if isinstance(m_res, dict):
-                            comps = m_res.get("madhab_comparison")
-                            recs = m_res.get("recommended_references") or []
-                            part_txt = f"=== أداة MCP: تحرير المسائل والمذاهب الفقهية ({m_res.get('madhab', 'المذاهب الأربعة')}) ===\n"
-                            if m_res.get("tahrir_guideline"):
-                                part_txt += f"ضابط التحرير: {m_res['tahrir_guideline']}\n"
-                            if comps and isinstance(comps, dict):
-                                for m_name, m_data in comps.items():
-                                    part_txt += f"- مذهب {m_name}: المعتمد ({m_data.get('standard_verdict', '')}) | الأدلة والمصادر: {m_data.get('sources_count', 0)} مصدر\n"
-                            elif recs:
-                                part_txt += "المراجع المعتمدة للتحرير:\n"
-                                for k, bk in enumerate(recs[:10]):
-                                    part_txt += f"[{k+1}] {bk.get('title', '')} ({bk.get('category', '')}) - {bk.get('era_label', '')} (وفاة المؤلف: {bk.get('author_death_hijri', '')}هـ)\n"
+                    try:
+                        cand = mcp_query
+                        m_narrator = re.search(r'(?:ترجمة|راوي|الراوي|عن)\s+([^\d\n،,]{3,35})', mcp_query)
+                        if m_narrator: cand = m_narrator.group(1).strip()
+                        narr_res = execute_tool("search_narrators", {"query": cand, "limit": min(limit_val, 4)})
+                        res_val = narr_res.get("result") if isinstance(narr_res, dict) else None
+                        narr_list = []
+                        if isinstance(res_val, list):
+                            narr_list = res_val
+                        elif isinstance(res_val, dict):
+                            narr_list = res_val.get("narrators") or res_val.get("results") or []
+                        if narr_list:
+                            part_txt = f"=== أداة MCP: تراجم الرواة والجرح والتعديل ({cand}) ===\n"
+                            for k, nr in enumerate(narr_list[:3]):
+                                part_txt += f"[{k+1}] الاسم: {nr.get('short_name') or nr.get('name', '')} | الرتبة: {nr.get('ibn_hajar_rank') or nr.get('grade', '')} | الطبقة: {nr.get('generation', '')}\n"
                             mcp_context_parts.append(part_txt)
+                    except Exception as err_narr:
+                        print(f"MCP narrators error: {err_narr}")
+
+                # 3. أداة تحرير المذاهب (tahrir_madhab)
+                if "tahrir_madhab" in active_tools and any(w in norm_q for w in ["مذهب", "مذاهب", "فقه", "حنفية", "شافعية", "مالكية", "حنابلة", "حكم", "يجوز", "حرام"]):
+                    try:
+                        madhab_res = execute_tool("tahrir_madhab", {"issue": mcp_query, "limit": min(limit_val, 10)})
+                        if madhab_res and "result" in madhab_res:
+                            m_res = madhab_res["result"]
+                            if isinstance(m_res, dict):
+                                comps = m_res.get("madhab_comparison")
+                                recs = m_res.get("recommended_references") or []
+                                part_txt = f"=== أداة MCP: تحرير المسائل والمذاهب الفقهية ({m_res.get('madhab', 'المذاهب الأربعة')}) ===\n"
+                                if m_res.get("tahrir_guideline"):
+                                    part_txt += f"ضابط التحرير: {m_res['tahrir_guideline']}\n"
+                                if comps and isinstance(comps, dict):
+                                    for m_name, m_data in comps.items():
+                                        part_txt += f"- مذهب {m_name}: المعتمد ({m_data.get('standard_verdict', '')}) | الأدلة والمصادر: {m_data.get('sources_count', 0)} مصدر\n"
+                                elif recs:
+                                    part_txt += "المراجع المعتمدة للتحرير:\n"
+                                    for k, bk in enumerate(recs[:4]):
+                                        part_txt += f"[{k+1}] {bk.get('title', '')} ({bk.get('category', '')}) - {bk.get('era_label', '')} (وفاة: {bk.get('author_death_hijri', '')}هـ)\n"
+                                mcp_context_parts.append(part_txt)
+                    except Exception as err_madhab:
+                        print(f"MCP madhab error: {err_madhab}")
+
+                # 4. أداة تخريج الحديث (takhrij_hadith)
+                if "takhrij_hadith" in active_tools and any(w in norm_q for w in ["حديث", "تخريج", "صحيح", "متن", "رواه", "الرسول", "النبي"]):
+                    try:
+                        cand = mcp_query
+                        m_h = re.search(r'(?:حديث|متن|قوله|في حديث)\s+([^\d\n،,]{3,50})', mcp_query)
+                        if m_h: cand = m_h.group(1).strip()
+                        h_res = execute_tool("takhrij_hadith", {"query": cand, "limit": 3})
+                        h_data = h_res.get("result") or []
+                        if isinstance(h_data, list) and h_data:
+                            part_txt = f"=== أداة MCP: تخريج الأحاديث والمتون ({cand}) ===\n"
+                            for k, h_item in enumerate(h_data[:3]):
+                                snippet = (h_item.get('text_snippet') or h_item.get('text') or '')[:160].strip()
+                                part_txt += f"[{k+1}] {snippet}... | كتاب: {h_item.get('book_title', '')}\n"
+                            mcp_context_parts.append(part_txt)
+                    except Exception as err_hadith:
+                        print(f"MCP hadith error: {err_hadith}")
+
+                # 5. أداة شواهد القرآن والتفاسير (search_quran_and_tafsir)
+                if "search_quran_and_tafsir" in active_tools and any(w in norm_q for w in ["قران", "اية", "ايات", "سورة", "تفسير"]):
+                    try:
+                        q_res = execute_tool("search_quran_and_tafsir", {"query": mcp_query, "limit": 2})
+                        q_data = q_res.get("result") or []
+                        if isinstance(q_data, list) and q_data:
+                            part_txt = "=== أداة MCP: شواهد الآيات والتفاسير ===\n"
+                            for k, q_item in enumerate(q_data[:2]):
+                                part_txt += f"[{k+1}] سورة {q_item.get('surah_name', '')} (آية {q_item.get('ayah_num', '')}): «{q_item.get('text', '')[:180]}»\n"
+                            mcp_context_parts.append(part_txt)
+                    except Exception as err_quran:
+                        print(f"MCP quran error: {err_quran}")
+
+                # 6. أداة معجم الجذور (lookup_word_root)
+                if "lookup_word_root" in active_tools and any(w in norm_q for w in ["جذر", "اشتقاق", "معجم", "لغة"]):
+                    try:
+                        token_cand = mcp_query.split()[0]
+                        r_res = execute_tool("lookup_word_root", {"token": token_cand})
+                        if r_res and "result" in r_res and isinstance(r_res["result"], dict) and r_res["result"]:
+                            r_info = r_res["result"]
+                            part_txt = f"=== أداة MCP: معجم الجذور والمعاني ({r_info.get('root', token_cand)}) ===\n"
+                            part_txt += f"المعاني الأصول: {str(r_info.get('meanings', ''))[:180]}\n"
+                            mcp_context_parts.append(part_txt)
+                    except Exception as err_root:
+                        print(f"MCP root error: {err_root}")
 
         combined_context_block = ""
         if sources:
             context_parts = []
-            for i, s in enumerate(sources):
+            for i, s in enumerate(sources[:6]):
                 head = f"المصدر [{i+1}]: كتاب: {s.get('title_ar', 'الشاملة')}"
                 if s.get('author_name'): head += f" | المؤلف: {s['author_name']}"
                 if s.get('part'): head += f" | جـ {s['part']}"
                 if s.get('page_num'): head += f" | صـ {s['page_num']}"
                 
-                body_txt = (s.get('full_body') or s.get('snippet') or '').strip()
-                fn_txt = (s.get('footnotes') or '').strip()
+                body_txt = (s.get('full_body') or s.get('snippet') or '').strip()[:1100]
+                fn_txt = (s.get('footnotes') or '').strip()[:250]
                 
                 entry = f"{head}\nالنص:\n«{body_txt}»"
                 if fn_txt:
@@ -1716,8 +1767,11 @@ async def ai_chat(req: AIChatRequest):
             combined_context_block += "استند بدقة وعناية تامة إلى النصوص والوثائق أعلاه لتوثيق الجواب وبيان أقوال الأئمة وتخريج الأحاديث والمصادر.\n"
 
         if mcp_context_parts:
+            mcp_full_txt = "\n\n".join(mcp_context_parts)
+            if len(mcp_full_txt) > 2800:
+                mcp_full_txt = mcp_full_txt[:2800] + "\n... [تم تلخيص بقية نتائج الأدوات لحفظ كفاءة وسرعة الاستجابة]"
             combined_context_block += "\n\n=== أدوات التحقيق الشرعي المستدعاة عبر بروتوكول MCP (Model Context Protocol) ===\n"
-            combined_context_block += "\n\n".join(mcp_context_parts)
+            combined_context_block += mcp_full_txt
             combined_context_block += "\n=======================================================\n"
 
         if combined_context_block and augmented_messages:

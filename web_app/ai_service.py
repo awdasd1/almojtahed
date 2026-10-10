@@ -326,19 +326,19 @@ async def call_ai_chat(
     if provider in ("ollama", "lmstudio"):
         client_timeout = httpx.Timeout(300.0, connect=30.0)
     else:
-        client_timeout = httpx.Timeout(120.0, connect=15.0, read=120.0, write=30.0)
+        client_timeout = httpx.Timeout(180.0, connect=20.0, read=180.0, write=30.0)
 
     async with httpx.AsyncClient(timeout=client_timeout) as client:
-        # ضبط سقف رموز التوليد المخرجة بحسب حدود كل مزود لتفادي أخطاء 400
+        # ضبط سقف رموز التوليد المخرجة بحسب حدود كل مزود لتفادي أخطاء 400 والمهل الطويلة
         provider_output_limits = {
-            "openai": 16384,
-            "anthropic": 8192,
-            "google": 65536,
-            "openrouter": 65536,
-            "ollama": 131072,
-            "lmstudio": 131072
+            "openai": 4096,
+            "anthropic": 4096,
+            "google": 8192,
+            "openrouter": 4096,
+            "ollama": 32768,
+            "lmstudio": 32768
         }
-        safe_output_tokens = min(max_tokens, provider_output_limits.get(provider, 32768))
+        safe_output_tokens = min(max_tokens, provider_output_limits.get(provider, 4096))
 
         # 1. المزود: OpenAI
         if provider == "openai":
@@ -400,7 +400,7 @@ async def call_ai_chat(
                 err_text = res.text
                 if "max_tokens" in err_text.lower() or "maximum allowable" in err_text.lower() or "tokens" in err_text.lower():
                     # إعادة المحاولة بسقف توليد آمن لتفادي أخطاء النماذج ذات سقف الإخراج المحدود
-                    payload["max_tokens"] = 8192
+                    payload["max_tokens"] = 2500
                     res = await client.post(
                         "https://openrouter.ai/api/v1/chat/completions",
                         headers={
@@ -427,34 +427,6 @@ async def call_ai_chat(
                 # دعم نماذج التفكير والاستدلال مثل DeepSeek-R1 عند إرجاع reasoning
                 raw_content = choice_msg.get("reasoning") or choice_msg.get("reasoning_content") or ""
             finish_reason = choice.get("finish_reason")
-
-            # إذا انقطع الرد لبلوغ سقف المخرجات (finish_reason == "length") نقوم باستكمال تلقائي ذكي لدمج بقية البحث
-            if finish_reason == "length" and raw_content and len(raw_content.strip()) > 100:
-                try:
-                    cont_payload = dict(payload)
-                    cont_payload["messages"] = list(payload["messages"]) + [
-                        {"role": "assistant", "content": raw_content},
-                        {"role": "user", "content": "أكمل الإجابة والبحث الفقهي بدقة من حيث توقفت تماماً دون تكرار أي كلام سابق، واستوفِ بقية الأقسام والترجيح وقائمة المراجع كاملة."}
-                    ]
-                    cont_res = await client.post(
-                        "https://openrouter.ai/api/v1/chat/completions",
-                        headers={
-                            "Authorization": f"Bearer {api_key}",
-                            "HTTP-Referer": "https://mj.majalat.ai",
-                            "X-Title": "Shamela AI Search"
-                        },
-                        json=cont_payload
-                    )
-                    if cont_res.status_code == 200:
-                        cont_data = cont_res.json()
-                        cont_choices = cont_data.get("choices") or []
-                        if cont_choices:
-                            cont_text = cont_choices[0].get("message", {}).get("content") or ""
-                            if cont_text:
-                                raw_content = raw_content.rstrip() + "\n\n" + cont_text.strip()
-                                finish_reason = cont_choices[0].get("finish_reason")
-                except Exception as cont_err:
-                    print(f"Auto-continuation error: {cont_err}")
 
             return {
                 "content": raw_content or "",
