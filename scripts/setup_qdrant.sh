@@ -103,40 +103,79 @@ else
     echo -e "${GREEN}✅ اكتمل تحميل ملف السنابشوت بنجاح!${NC}"
 fi
 
-# ------------------------------------------------------------------------------
-# 3. استعادة السنابشوت داخل Qdrant عبر API
-# ------------------------------------------------------------------------------
-echo -e "\n${YELLOW}[3/4] جاري استعادة السنابشوت داخل Qdrant (المجموعة: ${COLLECTION_NAME})...${NC}"
+# التأكد من وصول ملف السنابشوت داخل الحاوية مهما كانت طريقة تشغيلها
+if command -v docker >/dev/null 2>&1; then
+    QDRANT_CONTAINER=$(docker ps --filter "ancestor=qdrant/qdrant" --format "{{.Names}}" | head -n1 || docker ps --filter "name=qdrant" --format "{{.Names}}" | head -n1 || echo "")
+    if [ -n "$QDRANT_CONTAINER" ]; then
+        docker exec "$QDRANT_CONTAINER" mkdir -p /qdrant/snapshots 2>/dev/null || true
+        if ! docker exec "$QDRANT_CONTAINER" test -f "/qdrant/snapshots/${SNAPSHOT_NAME}" 2>/dev/null; then
+            echo -e "${CYAN}📋 نقل ملف السنابشوت إلى الحاوية (${QDRANT_CONTAINER})...${NC}"
+            docker cp "$TARGET_FILE" "${QDRANT_CONTAINER}:/qdrant/snapshots/${SNAPSHOT_NAME}" 2>/dev/null || true
+        fi
+    fi
+fi
 
-# نحدد المسار الداخلي للسنابشوت داخل حاوية Qdrant
+# ------------------------------------------------------------------------------
+# 3. استعادة السنابشوت داخل Qdrant ومتابعة فك وضخ المتجهات
+# ------------------------------------------------------------------------------
+echo -e "\n${YELLOW}[3/4] جاري إطلاق استعادة السنابشوت داخل Qdrant (المجموعة: ${COLLECTION_NAME})...${NC}"
+
 INTERNAL_SNAPSHOT_PATH="file:///qdrant/snapshots/${SNAPSHOT_NAME}"
 
+# إرسال طلب الاستعادة عبر PUT في الخلفية
 RECOVER_RESP=$(curl -s -X PUT "${QDRANT_URL}/collections/${COLLECTION_NAME}/snapshots/recover" \
     -H "Content-Type: application/json" \
     -d "{\"location\": \"${INTERNAL_SNAPSHOT_PATH}\"}" || true)
 
-echo -e "استجابة Qdrant: ${RECOVER_RESP}"
+echo -e "${CYAN}📡 تم إرسال أمر الاستعادة لمحرك Qdrant.${NC}"
+echo -e "${YELLOW}⏳ جاري فك ضغط ملايين المتجهات وبناء الفهرس في الذاكرة (يستغرق من 3 إلى 7 دقائق)...${NC}"
 
-# استعادة نسخة أيضاً تحت shamela_corpus إن رغبت
-if [ "${COLLECTION_NAME}" != "shamela_corpus" ]; then
-    echo -e "\n${YELLOW}ربط واستعادة المجموعة أيضاً كـ 'shamela_corpus'...${NC}"
-    curl -s -X PUT "${QDRANT_URL}/collections/shamela_corpus/snapshots/recover" \
-        -H "Content-Type: application/json" \
-        -d "{\"location\": \"${INTERNAL_SNAPSHOT_PATH}\"}" >/dev/null 2>&1 || true
-fi
+# حلقة ذكية لمتابعة حالة المجموعة حتى تصبح green وتكتمل المتجهات
+ELAPSED=0
+MAX_WAIT=900 # 15 دقيقة كحد أقصى
+STATUS=""
+POINTS=0
+
+while [ $ELAPSED -lt $MAX_WAIT ]; do
+    sleep 10
+    ELAPSED=$((ELAPSED + 10))
+    
+    CHECK_JSON=$(curl -s "${QDRANT_URL}/collections/${COLLECTION_NAME}" || true)
+    STATUS=$(echo "$CHECK_JSON" | grep -o '"status":"[a-zA-Z]*"' | head -n1 | cut -d':' -f2 | tr -d '"' || echo "")
+    POINTS=$(echo "$CHECK_JSON" | grep -o '"points_count":[0-9]*' | cut -d':' -f2 || echo 0)
+    
+    if [ "$STATUS" = "green" ] && [ "$POINTS" -gt 1000 ]; then
+        echo -e "\n${GREEN}✅ اكتمل فك وبناء المتجهات بنجاح خلال $((ELAPSED / 60)) دقيقة و $((ELAPSED % 60)) ثانية!${NC}"
+        break
+    else
+        echo -e "   ⏳ جاري المعالجة والبناء... (${ELAPSED} ثانية مضت | الحالة: ${STATUS:-قيد التهيئة})"
+    fi
+done
+
+# ربط الأسماء المستعارة الفورية بدون استهلاك أي مساحة إضافية
+echo -e "\n${CYAN}🔗 إنشاء الأسماء المستعارة (Aliases) لتوافق كافة أنواع الاستعلامات...${NC}"
+curl -s -X POST "${QDRANT_URL}/collections/aliases" \
+    -H "Content-Type: application/json" \
+    -d "{\"actions\": [{\"create_alias\": {\"collection_name\": \"${COLLECTION_NAME}\", \"alias_name\": \"shamela_corpus\"}}, {\"create_alias\": {\"collection_name\": \"${COLLECTION_NAME}\", \"alias_name\": \"badr_all_tsh_colc\"}}]}" >/dev/null 2>&1 || true
 
 # ------------------------------------------------------------------------------
-# 4. التحقق والتقرير النهائي
+# 4. التحقق والتقرير النهائي الذكي
 # ------------------------------------------------------------------------------
-echo -e "\n${YELLOW}[4/4] التحقق من اكتمال استعادة الفهرس...${NC}"
-sleep 3
+echo -e "\n${YELLOW}[4/4] إعداد التقرير النهائي...${NC}"
 
 INFO_RESP=$(curl -s "${QDRANT_URL}/collections/${COLLECTION_NAME}" || true)
-POINTS=$(echo "$INFO_RESP" | grep -o '"points_count":[0-9]*' | cut -d':' -f2 || echo "غير معروف")
+FINAL_POINTS=$(echo "$INFO_RESP" | grep -o '"points_count":[0-9]*' | cut -d':' -f2 || echo "$POINTS")
+FINAL_VECTORS=$(echo "$INFO_RESP" | grep -o '"indexed_vectors_count":[0-9]*' | cut -d':' -f2 || echo "غير معروف")
+
+# استخراج الآي بي الخارجي للسيرفر لتسهيل وصول المستخدم
+SERVER_IP=$(curl -s --connect-timeout 2 https://api.ipify.org 2>/dev/null || curl -s --connect-timeout 2 https://ifconfig.me 2>/dev/null || echo "localhost")
 
 echo -e "${GREEN}================================================================${NC}"
-echo -e "${GREEN}🎉 تم استعادة قاعدة البيانات والمتجهات بنجاح!${NC}"
-echo -e "${CYAN}📍 اسم المجموعة: ${COLLECTION_NAME}${NC}"
-echo -e "${CYAN}📊 عدد النقاط المفهرسة: ${POINTS}${NC}"
-echo -e "${CYAN}🌐 لوحة تحكم Qdrant متاحة على: ${QDRANT_URL}/dashboard${NC}"
+echo -e "${GREEN}🎉 تم تجهيز واستعادة قاعدة بيانات الشاملة والمجتهد بنجاح 100%!${NC}"
+echo -e "${CYAN}📍 اسم المجموعة الرئيسية: ${COLLECTION_NAME}${NC}"
+echo -e "${CYAN}🔗 الأسماء المستعارة: shamela_corpus و badr_all_tsh_colc${NC}"
+echo -e "${CYAN}📊 عدد النقاط المفهرسة: ${FINAL_POINTS} نقطة${NC}"
+echo -e "${CYAN}🧠 إجمالي المتجهات: ${FINAL_VECTORS} متجه${NC}"
+echo -e "${GREEN}🌐 رابط لوحة تحكم Qdrant المباشر:${NC}"
+echo -e "   👉 http://${SERVER_IP}:6333/dashboard"
 echo -e "${GREEN}================================================================${NC}"

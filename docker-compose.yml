@@ -35,6 +35,7 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_storage:/qdrant/storage:z
+      - qdrant_snapshots:/qdrant/snapshots:z
     networks:
       - shamela_net
 
@@ -43,6 +44,8 @@ volumes:
     name: shamela_data_volume
   qdrant_storage:
     name: shamela_qdrant_volume
+  qdrant_snapshots:
+    name: shamela_qdrant_snapshots
 
 networks:
   shamela_net:
