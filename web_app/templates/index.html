@@ -716,6 +716,21 @@
                                     </div>
                                 </div>
 
+                                <!-- توكن Hugging Face للنموذج المقيد بدر 768 -->
+                                <div class="form-group" style="background: var(--bg-surface, #ffffff); border: 1px solid var(--border-color, #e8e4dc); border-radius: var(--radius-sm, 8px); padding: 0.75rem; margin-bottom: 0.85rem;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.4rem;">
+                                        <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-main);">🔑 توكن Hugging Face (نموذج بدر 768)</span>
+                                        <span id="hfTokenBadge" class="badge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: rgba(218, 119, 86, 0.12); color: var(--accent, #da7756);">فحص الحالة...</span>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="password" id="inputHfToken" class="form-control" placeholder="hf_xxxxxxxxxxxxxxxx..." style="flex: 1; font-family: monospace; font-size: 0.8rem; padding: 0.45rem 0.6rem;">
+                                        <button type="button" id="btnSaveHfToken" class="btn btn-primary" onclick="submitHfToken()" style="white-space: nowrap; font-size: 0.8rem; padding: 0.45rem 0.85rem; background: var(--accent, #da7756); border: none; color: #fff; border-radius: 6px; cursor: pointer;">حفظ وتفعيل</button>
+                                    </div>
+                                    <small id="hfTokenFeedback" style="display: block; margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-muted, #736f69); line-height: 1.3;">
+                                        لحفظ التوكن في الخادم وتفعيل نموذج Badr 768 فوراً بدون الحاجة لإعادة نشر الحاوية.
+                                    </small>
+                                </div>
+
                                 <div class="form-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="aiRagEnabled" checked onchange="saveAiSettings()">
@@ -2959,7 +2974,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- Scripts -->
-    <script src="/static/js/main.js?v=5.3"></script>
+    <script src="/static/js/main.js?v=5.4"></script>
 </body>
 
 </html>

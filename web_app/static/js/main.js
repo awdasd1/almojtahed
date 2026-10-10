@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initBookCollections();
     initAssistants();
     initCustomMcpTools();
+    checkHfTokenStatus();
 });
 
 // التعرف الديناميكي على روابط الخدمات (Claude Web، Qdrant، السيرفرات السحابية والمحلية)
@@ -49,6 +50,84 @@ async function initDynamicEndpoints() {
         }
     } catch (e) {
         console.warn("Dynamic endpoints init warning:", e);
+    }
+}
+
+// فحص وإدارة توكن Hugging Face لنموذج بدر 768
+async function checkHfTokenStatus() {
+    const badge = document.getElementById("hfTokenBadge");
+    const feedback = document.getElementById("hfTokenFeedback");
+    if (!badge) return;
+    try {
+        const res = await fetch("/api/settings/hf-token");
+        if (res.ok) {
+            const data = await res.json();
+            if (data.model_loaded) {
+                badge.style.background = "rgba(16, 185, 129, 0.15)";
+                badge.style.color = "#10b981";
+                badge.innerText = "✅ متصل ونشط (768)";
+                if (feedback) feedback.innerText = `النموذج جاهز في الذاكرة (التوكن: ${data.token_prefix || "متوفر"}).`;
+            } else if (data.has_token) {
+                badge.style.background = "rgba(245, 158, 11, 0.15)";
+                badge.style.color = "#f59e0b";
+                badge.innerText = "⏳ قيد التحميل...";
+                if (feedback) feedback.innerText = data.error || "التوكن محفوظ، جارٍ الاتصال بـ Hugging Face...";
+            } else {
+                badge.style.background = "rgba(239, 68, 68, 0.15)";
+                badge.style.color = "#ef4444";
+                badge.innerText = "⚠️ يتطلب توكن";
+                if (feedback) feedback.innerText = "أدخل توكن Hugging Face المصرح له للوصول لنموذج بدر 768 ثم اضغط حفظ وتفعيل.";
+            }
+        }
+    } catch (e) {
+        console.warn("HF token check error:", e);
+    }
+}
+
+async function submitHfToken() {
+    const input = document.getElementById("inputHfToken");
+    const btn = document.getElementById("btnSaveHfToken");
+    const badge = document.getElementById("hfTokenBadge");
+    const feedback = document.getElementById("hfTokenFeedback");
+    if (!input || !input.value.trim()) {
+        if (typeof showToast === "function") showToast("يرجى إدخال التوكن أولاً (يبدأ بـ hf_)", "error");
+        else alert("يرجى إدخال التوكن أولاً (يبدأ بـ hf_)");
+        return;
+    }
+    const tokenVal = input.value.trim();
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "⏳ جارٍ المصادقة والتحميل...";
+    }
+    if (feedback) feedback.innerText = "جارٍ إرسال التوكن إلى الخادم والاتصال بـ Hugging Face لتحميل أوزان بدر 768...";
+    try {
+        const res = await fetch("/api/settings/hf-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: tokenVal })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === "success") {
+            if (typeof showToast === "function") showToast("✅ تم حفظ التوكن ومصادقة نموذج بدر 768 بنجاح!", "success");
+            input.value = "";
+            checkHfTokenStatus();
+        } else {
+            const errDetail = data.detail || "فشل التحميل";
+            if (typeof showToast === "function") showToast(errDetail, "error");
+            if (badge) {
+                badge.style.background = "rgba(239, 68, 68, 0.15)";
+                badge.style.color = "#ef4444";
+                badge.innerText = "❌ خطأ مصادقة";
+            }
+            if (feedback) feedback.innerText = errDetail;
+        }
+    } catch (e) {
+        if (typeof showToast === "function") showToast(`خطأ في الاتصال: ${e.message}`, "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "حفظ وتفعيل";
+        }
     }
 }
 

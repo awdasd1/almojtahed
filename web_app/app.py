@@ -43,8 +43,6 @@ BADR_COLLECTION_NAME = "badr_corpus"
 BADR_TCH_COLLECTION_NAME = "badr_tch_corpus"
 BADR_ALL_TSH_COLLECTION_NAME = "badr_all_tsh_corpus"
 BADR_MODEL_ID = "somayaeltanbouly/Badr_embedding_v0"
-_raw_token = (os.environ.get("BADR_HF_TOKEN") or os.environ.get("HF_TOKEN") or "").strip()
-BADR_HF_TOKEN = _raw_token if (_raw_token and not _raw_token.startswith("hf_...")) else None
 RERANKER_MODEL_ID = "BAAI/bge-reranker-v2-m3"
 
 # Global state
@@ -53,6 +51,7 @@ state: Dict[str, Any] = {
     "badr_model": None,
     "badr_model_status": "idle",
     "badr_model_error": None,
+    "hf_token": None,
     "bm25_model": None,
     "reranker": None,
     "loaded_rerankers": {},
@@ -60,6 +59,34 @@ state: Dict[str, Any] = {
     "device": "mps" if torch.backends.mps.is_available() else "cpu",
     "db_conn": None
 }
+
+def get_hf_token() -> Optional[str]:
+    """استرجاع توكن Hugging Face من الذاكرة أو متغيرات البيئة أو الملفات المحفوظة"""
+    if state.get("hf_token"):
+        return state["hf_token"]
+
+    for k in ["BADR_HF_TOKEN", "HF_TOKEN", "HUGGINGFACE_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HF_AUTH_TOKEN"]:
+        val = (os.environ.get(k) or "").strip().strip("\"'")
+        if val and not val.startswith("hf_..."):
+            return val
+
+    # البحث في ملفات التخزين الدائم
+    paths_to_check = [
+        Path(os.environ.get("DATA_DIR", "/app/data")) / "hf_token.txt",
+        Path("/app/hf_token.txt"),
+        Path("./data/hf_token.txt"),
+        Path.home() / ".cache" / "huggingface" / "token",
+        Path.home() / ".huggingface" / "token"
+    ]
+    for p in paths_to_check:
+        try:
+            if p.exists() and p.is_file():
+                content = p.read_text(encoding="utf-8").strip().strip("\"'")
+                if content and not content.startswith("hf_..."):
+                    return content
+        except Exception:
+            pass
+    return None
 
 SUPPORTED_RERANKERS: Dict[str, Dict[str, Any]] = {
     "BAAI/bge-reranker-v2-m3": {
@@ -212,44 +239,50 @@ def create_resilient_qdrant_client() -> QdrantClient:
 
 _badr_model_lock = threading.Lock()
 
-def get_badr_model():
-    """الحصول على نموذج تضمين بدر (768 أبعاد) مع قفل تزامن ودعم المصادقة التلقائية لـ Gated Model"""
-    if state.get("badr_model") is not None:
+def get_badr_model(force_reload: bool = False):
+    """الحصول على نموذج تضمين بدر (768 أبعاد) مع قفل تزامن ودعم التوكن المباشر"""
+    if not force_reload and state.get("badr_model") is not None:
         return state["badr_model"]
         
     with _badr_model_lock:
-        if state.get("badr_model") is not None:
+        if not force_reload and state.get("badr_model") is not None:
             return state["badr_model"]
             
         state["badr_model_status"] = "loading"
+        token = get_hf_token()
         
-        # محاولة 1: تحميل مصادق بالتوكن (لأنه نموذج مقيد Gated Model)
-        if BADR_HF_TOKEN:
+        if token:
             try:
-                print(f"⏳ Loading {BADR_MODEL_ID} embedding model with authenticated token...")
-                state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, token=BADR_HF_TOKEN, device="cpu")
+                print(f"⏳ Loading {BADR_MODEL_ID} with authenticated Hugging Face token...")
+                model = SentenceTransformer(BADR_MODEL_ID, token=token, device="cpu")
+                state["badr_model"] = model
                 state["badr_model_status"] = "ready"
                 state["badr_model_error"] = None
                 print("✅ Badr Embedding Model loaded successfully!")
-                return state["badr_model"]
+                return model
             except Exception as be:
                 print(f"⚠️ Authenticated load of {BADR_MODEL_ID} failed: {be}")
-                state["badr_model_error"] = str(be)
-
-        # محاولة 2: تحميل بدون توكن كاحتياط
-        try:
-            print(f"⏳ Trying {BADR_MODEL_ID} anonymous load...")
-            state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, device="cpu")
-            state["badr_model_status"] = "ready"
-            state["badr_model_error"] = None
-            print("✅ Badr Embedding Model loaded anonymously!")
-            return state["badr_model"]
-        except Exception as be2:
-            print(f"⚠️ Anonymous load of {BADR_MODEL_ID} failed: {be2}")
-            state["badr_model_error"] = str(be2)
-            state["badr_model_status"] = "error"
-            
-    return state.get("badr_model")
+                state["badr_model_error"] = f"فشلت المصادقة بالتوكن المقدم: {be}"
+                state["badr_model_status"] = "error"
+                return None
+        else:
+            # محاولة تحميل بدون توكن كاحتياط
+            try:
+                print(f"⏳ Trying {BADR_MODEL_ID} without token...")
+                model = SentenceTransformer(BADR_MODEL_ID, device="cpu")
+                state["badr_model"] = model
+                state["badr_model_status"] = "ready"
+                state["badr_model_error"] = None
+                print("✅ Badr Embedding Model loaded anonymously!")
+                return model
+            except Exception as be2:
+                print(f"⚠️ Anonymous load failed: {be2}")
+                state["badr_model_error"] = (
+                    "النموذج مقيّد (Gated Model) ويتطلب توكن Hugging Face مصرحاً به. "
+                    "يرجى إدخال التوكن في لوحة الإعدادات أو عبر متغير البيئة HF_TOKEN."
+                )
+                state["badr_model_status"] = "error"
+                return None
 
 def get_bm25_model():
     """الحصول على نموذج FastEmbed BM25 مع تحميله عند الطلب"""
@@ -308,10 +341,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class HFTokenPayload(BaseModel):
+    token: str
+
 @app.get("/healthz")
 @app.get("/health")
 @app.get("/api/health")
 async def health_check():
+    tok = get_hf_token()
     return {
         "status": "ok",
         "app": "shamela",
@@ -319,9 +356,51 @@ async def health_check():
         "badr_model_loaded": state.get("badr_model") is not None,
         "badr_model_status": state.get("badr_model_status", "unknown"),
         "badr_model_error": state.get("badr_model_error"),
-        "hf_token_present": bool(BADR_HF_TOKEN),
-        "hf_token_prefix": (BADR_HF_TOKEN[:7] + "...") if BADR_HF_TOKEN else None,
+        "hf_token_present": bool(tok),
+        "hf_token_prefix": (tok[:7] + "..." + tok[-4:]) if (tok and len(tok) > 12) else None,
         "device": state.get("device", "cpu")
+    }
+
+@app.get("/api/settings/hf-token")
+async def get_hf_token_status():
+    tok = get_hf_token()
+    return {
+        "has_token": bool(tok),
+        "token_prefix": (tok[:7] + "..." + tok[-4:]) if (tok and len(tok) > 12) else None,
+        "model_status": state.get("badr_model_status", "unknown"),
+        "model_loaded": state.get("badr_model") is not None,
+        "error": state.get("badr_model_error")
+    }
+
+@app.post("/api/settings/hf-token")
+async def save_hf_token(payload: HFTokenPayload):
+    new_token = payload.token.strip().strip("\"'")
+    if not new_token or not new_token.startswith("hf_"):
+        raise HTTPException(status_code=400, detail="صيغة التوكن غير صحيحة. يجب أن يبدأ بـ hf_")
+        
+    state["hf_token"] = new_token
+    os.environ["HF_TOKEN"] = new_token
+    os.environ["BADR_HF_TOKEN"] = new_token
+    
+    # حفظ في ملف دائم للتخزين
+    for d_path in [Path(os.environ.get("DATA_DIR", "/app/data")), Path("./data")]:
+        try:
+            d_path.mkdir(parents=True, exist_ok=True)
+            (d_path / "hf_token.txt").write_text(new_token, encoding="utf-8")
+        except Exception:
+            pass
+            
+    # إعادة تحميل النموذج فوراً
+    model = get_badr_model(force_reload=True)
+    if not model:
+        err = state.get("badr_model_error") or "فشلت المصادقة مع Hugging Face"
+        raise HTTPException(status_code=400, detail=f"تم حفظ التوكن ولكن فشل تحميل النموذج: {err}")
+        
+    return {
+        "status": "success",
+        "message": "تم حفظ التوكن ومصادقته وتحميل نموذج بدر (768 أبعاد) بنجاح!",
+        "model_id": BADR_MODEL_ID,
+        "dimension": 768
     }
 
 @app.exception_handler(HTTPException)
