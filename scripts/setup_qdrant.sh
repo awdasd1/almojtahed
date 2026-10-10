@@ -111,7 +111,7 @@ echo -e "\n${YELLOW}[3/4] جاري استعادة السنابشوت داخل Qd
 # نحدد المسار الداخلي للسنابشوت داخل حاوية Qdrant
 INTERNAL_SNAPSHOT_PATH="file:///qdrant/snapshots/${SNAPSHOT_NAME}"
 
-RECOVER_RESP=$(curl -s -X POST "${QDRANT_URL}/collections/${COLLECTION_NAME}/snapshots/recover" \
+RECOVER_RESP=$(curl -s -X PUT "${QDRANT_URL}/collections/${COLLECTION_NAME}/snapshots/recover" \
     -H "Content-Type: application/json" \
     -d "{\"location\": \"${INTERNAL_SNAPSHOT_PATH}\"}" || true)
 
@@ -120,7 +120,7 @@ echo -e "استجابة Qdrant: ${RECOVER_RESP}"
 # استعادة نسخة أيضاً تحت shamela_corpus إن رغبت
 if [ "${COLLECTION_NAME}" != "shamela_corpus" ]; then
     echo -e "\n${YELLOW}ربط واستعادة المجموعة أيضاً كـ 'shamela_corpus'...${NC}"
-    curl -s -X POST "${QDRANT_URL}/collections/shamela_corpus/snapshots/recover" \
+    curl -s -X PUT "${QDRANT_URL}/collections/shamela_corpus/snapshots/recover" \
         -H "Content-Type: application/json" \
         -d "{\"location\": \"${INTERNAL_SNAPSHOT_PATH}\"}" >/dev/null 2>&1 || true
 fi
