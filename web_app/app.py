@@ -864,6 +864,44 @@ def execute_search_sync(req: Union[SearchRequest, Dict[str, Any]]) -> Dict[str, 
                 limit=fetch_limit,
                 with_payload=True
             )
+        # في حال لم يرجع فلتر التصنيف أو الكتب أي نتيجة نظراً لاختلاف صيغة المعرفات في السناب شوت، نعيد الاستعلام الموسع تلقائياً
+        if not search_res.points and qdrant_filter is not None:
+            if target_coll == BADR_ALL_TSH_COLLECTION_NAME:
+                if req.mode == "dense" or not sparse_vec:
+                    search_res = safe_query_points(
+                        collection_name=target_coll,
+                        query=dense_vec,
+                        using="text-dense",
+                        limit=fetch_limit,
+                        with_payload=True
+                    )
+                elif req.mode == "sparse":
+                    search_res = safe_query_points(
+                        collection_name=target_coll,
+                        query=sparse_vec,
+                        using="text-sparse",
+                        limit=fetch_limit,
+                        with_payload=True
+                    )
+                else:
+                    search_res = safe_query_points(
+                        collection_name=target_coll,
+                        prefetch=[
+                            Prefetch(query=dense_vec, using="text-dense", limit=fetch_limit),
+                            Prefetch(query=sparse_vec, using="text-sparse", limit=fetch_limit),
+                        ],
+                        query=FusionQuery(fusion=Fusion.RRF),
+                        limit=fetch_limit,
+                        with_payload=True
+                    )
+            else:
+                search_res = safe_query_points(
+                    collection_name=target_coll,
+                    query=dense_vec,
+                    limit=fetch_limit,
+                    with_payload=True
+                )
+
         t_search = time.time() - t_search0
         
         # 4. إثراء النتائج ببيانات SQLite والمتن

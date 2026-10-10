@@ -439,9 +439,32 @@ def get_page_context(
         return {"error": f"Book with id {book_id} not found"}
 
     rel_path = book_row["rel_path"]
-    pages_file = BASE_DIR / rel_path / "pages.jsonl"
-    if not pages_file.exists():
-        return {"error": f"pages.jsonl not found for book {book_id}"}
+    pages_file = BASE_DIR / rel_path / "pages.jsonl" if rel_path else None
+    if not pages_file or not pages_file.exists():
+        # في بيئة الكلاود (حيث ملفات JSONL الخام غير مخزنة على القرص)، نرجع بطاقة وعزو الكتاب التوثيقية بسلاسة
+        card = book_row["betaka_text"] or ""
+        b_meta = parse_betaka_metadata(card)
+        citation = format_scholarly_citation(
+            title=book_row["title_ar"],
+            author=book_row["main_author_name_ar"],
+            death_hijri=book_row["main_author_death_hijri"],
+            part=part or "١",
+            page_num=page_num or 1,
+            meta=b_meta
+        )
+        return {
+            "book_id": book_id,
+            "title": book_row["title_ar"],
+            "author": book_row["main_author_name_ar"],
+            "category": book_row["category_name_ar"],
+            "citation": citation,
+            "page": {
+                "page_num": page_num or 1,
+                "part": part or "١",
+                "body": f"كتاب: «{book_row['title_ar']}» - {citation}\n\n[بطاقة التوثيق]:\n{card}" if card else f"كتاب: «{book_row['title_ar']}»"
+            },
+            "note": "تم جلب بيانات التوثيق من الفهرس السحابي المعتمد."
+        }
 
     all_pages = []
     target_idx = 0
