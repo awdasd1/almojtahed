@@ -42,7 +42,8 @@ BADR_COLLECTION_NAME = "badr_corpus"
 BADR_TCH_COLLECTION_NAME = "badr_tch_corpus"
 BADR_ALL_TSH_COLLECTION_NAME = "badr_all_tsh_corpus"
 BADR_MODEL_ID = "somayaeltanbouly/Badr_embedding_v0"
-BADR_HF_TOKEN = os.environ.get("BADR_HF_TOKEN", os.environ.get("HF_TOKEN", ""))
+_raw_token = (os.environ.get("BADR_HF_TOKEN") or os.environ.get("HF_TOKEN") or "").strip()
+BADR_HF_TOKEN = _raw_token if _raw_token else None
 RERANKER_MODEL_ID = "BAAI/bge-reranker-v2-m3"
 
 # Global state
@@ -206,36 +207,47 @@ def create_resilient_qdrant_client() -> QdrantClient:
     print(f"⚠️ [Qdrant] Failed to connect to probed candidates, fallback to: {fallback}")
     return QdrantClient(url=fallback, check_compatibility=False)
 
+def get_badr_model():
+    """الحصول على نموذج تضمين بدر، مع تحميله عند الطلب إذا لم يكن محملاً"""
+    if state.get("badr_model") is None:
+        try:
+            print(f"⏳ Loading {BADR_MODEL_ID} embedding model...")
+            state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, token=BADR_HF_TOKEN, device=state["device"])
+            print("✅ Badr Embedding Model loaded successfully!")
+        except Exception as be:
+            print(f"⚠️ Error loading Badr embedding model: {be}")
+    return state.get("badr_model")
+
+def get_bm25_model():
+    """الحصول على نموذج FastEmbed BM25 مع تحميله عند الطلب"""
+    if state.get("bm25_model") is None:
+        try:
+            from fastembed import SparseTextEmbedding
+            print("⏳ Loading FastEmbed Qdrant/bm25 model...")
+            state["bm25_model"] = SparseTextEmbedding(model_name="Qdrant/bm25")
+            print("✅ FastEmbed BM25 Model loaded successfully!")
+        except Exception as bme:
+            print(f"⚠️ Error loading FastEmbed BM25 model: {bme}")
+    return state.get("bm25_model")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print(f"🚀 Initializing Shamela Search Engine on device: {state['device']}...")
     state["qdrant"] = create_resilient_qdrant_client()
     state["db_conn"] = get_db()
     
+    # Preload Badr & BM25 models
+    get_badr_model()
+    get_bm25_model()
+
     # Load BGE-M3 model
     t0 = time.time()
     print("⏳ Loading BAAI/bge-m3 model...")
-    state["model"] = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, device=state["device"])
-    print(f"✅ BGE-M3 Model loaded in {time.time()-t0:.2f}s!")
-
-    # Load Badr embedding model
-    t1 = time.time()
-    print(f"⏳ Loading {BADR_MODEL_ID} embedding model...")
     try:
-        state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, token=BADR_HF_TOKEN, device=state["device"])
-        print(f"✅ Badr Embedding Model loaded in {time.time()-t1:.2f}s!")
-    except Exception as be:
-        print(f"⚠️ Error loading Badr embedding model: {be}")
-
-    # Load FastEmbed BM25 model for badr_all_tsh_corpus
-    t_bm = time.time()
-    print("⏳ Loading FastEmbed Qdrant/bm25 model...")
-    try:
-        from fastembed import SparseTextEmbedding
-        state["bm25_model"] = SparseTextEmbedding(model_name="Qdrant/bm25")
-        print(f"✅ FastEmbed BM25 Model loaded in {time.time()-t_bm:.2f}s!")
-    except Exception as bme:
-        print(f"⚠️ Error loading FastEmbed BM25 model: {bme}")
+        state["model"] = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, device=state["device"])
+        print(f"✅ BGE-M3 Model loaded in {time.time()-t0:.2f}s!")
+    except Exception as me:
+        print(f"⚠️ Error loading BGE-M3 model: {me}")
 
     # Load BGE-Reranker-v2-m3 model
     t2 = time.time()
@@ -602,6 +614,8 @@ async def search(req: SearchRequest):
         
     if state.get("qdrant") is None:
         state["qdrant"] = create_resilient_qdrant_client()
+    if state.get("db_conn") is None:
+        state["db_conn"] = get_db()
     qdrant = state["qdrant"]
 
     def safe_query_points(**kwargs):
@@ -618,23 +632,27 @@ async def search(req: SearchRequest):
             raise q_err
 
     target_coll = req.collection_name or BADR_ALL_TSH_COLLECTION_NAME
-    if target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME) and not state.get("badr_model"):
+    badr_model = get_badr_model()
+    if badr_model:
+        if target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME, COLLECTION_NAME, "badr_all_tsh_colc"):
+            target_coll = BADR_ALL_TSH_COLLECTION_NAME
+    elif target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME):
         target_coll = COLLECTION_NAME
         
     final_limit = req.reranker_limit if (req.use_reranker and req.reranker_limit) else req.limit
     fetch_limit = min(max(req.limit, final_limit * 3, 30), 200) if req.use_reranker else req.limit
     
     # ===================== مسار 1: لقطات بدر (badr_all_tsh_corpus الهجين، badr_corpus، badr_tch_corpus) =====================
-    if target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME):
-        badr_model = state["badr_model"]
+    if target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME) and badr_model:
         t_enc0 = time.time()
         enc_query = normalize_arabic(query) if target_coll == BADR_TCH_COLLECTION_NAME else query
         dense_vec = badr_model.encode(enc_query).tolist()
         
         sparse_vec = None
-        if target_coll == BADR_ALL_TSH_COLLECTION_NAME and state.get("bm25_model"):
+        bm25_model = get_bm25_model()
+        if target_coll == BADR_ALL_TSH_COLLECTION_NAME and bm25_model:
             try:
-                sparse_emb = list(state["bm25_model"].embed([query]))[0]
+                sparse_emb = list(bm25_model.embed([query]))[0]
                 sparse_vec = SparseVector(indices=sparse_emb.indices.tolist(), values=sparse_emb.values.tolist())
             except Exception as se:
                 print(f"Error generating BM25 sparse vector: {se}")
@@ -863,30 +881,47 @@ async def search(req: SearchRequest):
     # 3. Query Qdrant
     t_search0 = time.time()
     
+    # فحص أسماء المتجهات في المجموعة لتفادي Wrong input: Not existing vector name error
+    coll_dense_name = "dense"
+    coll_sparse_name = "sparse"
+    try:
+        coll_info = qdrant.get_collection(target_coll or COLLECTION_NAME)
+        v_dict = coll_info.config.params.vectors if coll_info and coll_info.config and coll_info.config.params else {}
+        if isinstance(v_dict, dict):
+            if "text-dense" in v_dict:
+                coll_dense_name = "text-dense"
+            elif "dense" in v_dict:
+                coll_dense_name = "dense"
+        sv_dict = coll_info.config.params.sparse_vectors if coll_info and coll_info.config and coll_info.config.params else {}
+        if isinstance(sv_dict, dict) and "text-sparse" in sv_dict:
+            coll_sparse_name = "text-sparse"
+    except Exception:
+        pass
+    
     if req.mode == "dense":
         search_res = safe_query_points(
-            collection_name=COLLECTION_NAME,
+            collection_name=target_coll or COLLECTION_NAME,
             query=dense_vec,
-            using="dense",
+            using=coll_dense_name,
             query_filter=qdrant_filter,
             limit=fetch_limit,
             with_payload=True
         )
     elif req.mode == "sparse":
         search_res = safe_query_points(
-            collection_name=COLLECTION_NAME,
+            collection_name=target_coll or COLLECTION_NAME,
             query=SparseVector(indices=sparse_indices, values=sparse_values),
-            using="sparse",
+            using=coll_sparse_name,
             query_filter=qdrant_filter,
             limit=fetch_limit,
             with_payload=True
         )
     else: # Hybrid RRF
         search_res = safe_query_points(
-            collection_name=COLLECTION_NAME,
+            collection_name=target_coll or COLLECTION_NAME,
             prefetch=[
-                Prefetch(query=dense_vec, using="dense", filter=qdrant_filter, limit=fetch_limit * 2),
-                Prefetch(query=SparseVector(indices=sparse_indices, values=sparse_values), using="sparse", filter=qdrant_filter, limit=fetch_limit * 2),
+                Prefetch(query=dense_vec, using=coll_dense_name, filter=qdrant_filter, limit=fetch_limit * 2),
+                Prefetch(query=SparseVector(indices=sparse_indices, values=sparse_values), using=coll_sparse_name, filter=qdrant_filter, limit=fetch_limit * 2),
             ],
             query=FusionQuery(fusion=Fusion.RRF),
             limit=fetch_limit,
