@@ -871,44 +871,103 @@ def execute_search_sync(req: Union[SearchRequest, Dict[str, Any]]) -> Dict[str, 
         enriched = []
         for hit in search_res.points:
             p = hit.payload or {}
-            b_slug = p.get("book", "")
-            page_num = p.get("page", "")
-            raw_body = p.get("text", "")
-            book_id = int(b_slug.split("__")[0]) if "__" in b_slug else 0
+            b_slug = str(p.get("book") or p.get("book_slug") or "").strip()
             
+            # 1. استخراج معرف الكتاب (book_id)
+            book_id = 0
+            if p.get("book_id") is not None:
+                try:
+                    book_id = int(p.get("book_id"))
+                except (ValueError, TypeError):
+                    book_id = 0
+            if not book_id and b_slug:
+                if "__" in b_slug:
+                    try:
+                        book_id = int(b_slug.split("__")[0])
+                    except (ValueError, TypeError):
+                        book_id = 0
+                elif b_slug.isdigit():
+                    book_id = int(b_slug)
+            
+            # 2. استخراج الصفحة والجزء والنص
+            raw_page = p.get("page") if p.get("page") is not None else p.get("page_num")
+            page_num = str(raw_page).strip() if raw_page is not None else ""
+            raw_part = p.get("part") if p.get("part") is not None else p.get("volume")
+            resolved_part = str(raw_part).strip() if raw_part not in (None, "None", "null", "") else ""
+            raw_body = p.get("text") or p.get("body") or p.get("full_body") or p.get("snippet") or ""
+
+            # 3. جلب بيانات التوثيق من SQLite
             b_row = None
             if book_id > 0:
-                cur.execute(
-                    "SELECT book_id, title_ar, category_name_ar, main_author_name_ar, main_author_death_hijri, rel_path, betaka_text FROM books WHERE book_id = ? LIMIT 1",
-                    (book_id,)
-                )
-                b_row = cur.fetchone()
-                
-            title = b_row["title_ar"] if b_row else b_slug
-            cat_name = b_row["category_name_ar"] if b_row else ""
-            author_name = b_row["main_author_name_ar"] if b_row else ""
-            death_hijri = b_row["main_author_death_hijri"] if b_row else None
-            rel_path = b_row["rel_path"] if b_row else ""
-            betaka_text = b_row["betaka_text"] if (b_row and "betaka_text" in b_row.keys() and b_row["betaka_text"]) else ""
-            
-            footnotes = ""
-            resolved_part = ""
+                try:
+                    cur.execute(
+                        "SELECT book_id, title_ar, category_name_ar, main_author_name_ar, main_author_death_hijri, rel_path, betaka_text FROM books WHERE book_id = ? LIMIT 1",
+                        (book_id,)
+                    )
+                    b_row = cur.fetchone()
+                except Exception:
+                    b_row = None
+
+            cand_title = p.get("title_ar") or p.get("title") or p.get("book_title") or ""
+            if not b_row and cand_title:
+                try:
+                    cur.execute(
+                        "SELECT book_id, title_ar, category_name_ar, main_author_name_ar, main_author_death_hijri, rel_path, betaka_text FROM books WHERE title_ar = ? LIMIT 1",
+                        (cand_title,)
+                    )
+                    b_row = cur.fetchone()
+                except Exception:
+                    b_row = None
+
+            if not b_row and b_slug and "__" in b_slug:
+                slug_clean = b_slug.split("__", 1)[1].replace("-", " ").strip()
+                try:
+                    cur.execute(
+                        "SELECT book_id, title_ar, category_name_ar, main_author_name_ar, main_author_death_hijri, rel_path, betaka_text FROM books WHERE title_ar LIKE ? LIMIT 1",
+                        (f"%{slug_clean}%",)
+                    )
+                    b_row = cur.fetchone()
+                except Exception:
+                    b_row = None
+
+            if b_row:
+                book_id = b_row["book_id"]
+                title = b_row["title_ar"] or cand_title or b_slug
+                cat_name = b_row["category_name_ar"] or p.get("category_name_ar") or p.get("category_name") or ""
+                author_name = b_row["main_author_name_ar"] or p.get("author_name") or p.get("author") or ""
+                death_hijri = b_row["main_author_death_hijri"] if b_row["main_author_death_hijri"] is not None else p.get("death_hijri")
+                rel_path = b_row["rel_path"] or p.get("rel_path") or ""
+                betaka_text = b_row["betaka_text"] if (b_row and "betaka_text" in b_row.keys() and b_row["betaka_text"]) else (p.get("betaka_text") or "")
+            else:
+                clean_slug_title = b_slug.split("__", 1)[1].replace("-", " ") if "__" in b_slug else b_slug
+                title = cand_title or clean_slug_title or (f"كتاب رقم {book_id}" if book_id else "كتاب من الشاملة")
+                cat_name = p.get("category_name_ar") or p.get("category_name") or ""
+                author_name = p.get("author_name") or p.get("author") or ""
+                death_hijri = p.get("death_hijri")
+                rel_path = p.get("rel_path") or ""
+                betaka_text = p.get("betaka_text") or p.get("betaka") or ""
+
+            footnotes = p.get("footnotes") or ""
             if rel_path:
-                found_page = find_book_page(rel_path, page_num, raw_body)
-                if found_page:
-                    resolved_part = str(found_page.get("part") or "")
-                    if found_page.get("page_num") is not None:
-                        page_num = found_page.get("page_num")
-                    if found_page.get("footnotes"):
-                        footnotes = found_page.get("footnotes")
-                    if found_page.get("body"):
-                        raw_body = found_page.get("body")
-                elif not raw_body or len(raw_body) <= 300:
-                    page_data = fetch_page_content(rel_path, "", page_num, "")
-                    if page_data and page_data.get("body"):
-                        raw_body = page_data.get("body")
-                        footnotes = page_data.get("footnotes", "")
-                
+                try:
+                    found_page = find_book_page(rel_path, page_num, raw_body)
+                    if found_page:
+                        if found_page.get("part"):
+                            resolved_part = str(found_page.get("part"))
+                        if found_page.get("page_num") is not None:
+                            page_num = found_page.get("page_num")
+                        if found_page.get("footnotes"):
+                            footnotes = found_page.get("footnotes")
+                        if found_page.get("body"):
+                            raw_body = found_page.get("body")
+                    elif not raw_body or len(raw_body) <= 300:
+                        page_data = fetch_page_content(rel_path, "", page_num, "")
+                        if page_data and page_data.get("body"):
+                            raw_body = page_data.get("body")
+                            footnotes = page_data.get("footnotes", "")
+                except Exception:
+                    pass
+
             snippet = highlight_terms(raw_body, query) if raw_body else ""
             
             enriched.append({
@@ -916,7 +975,7 @@ def execute_search_sync(req: Union[SearchRequest, Dict[str, Any]]) -> Dict[str, 
                 "score": round(hit.score, 4) if hit.score else 0.0,
                 "book_id": book_id,
                 "title_ar": title,
-                "category_id": req.category_id,
+                "category_id": req.category_id or p.get("category_id"),
                 "category_name_ar": cat_name,
                 "author_name": author_name,
                 "death_hijri": death_hijri,

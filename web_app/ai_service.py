@@ -323,8 +323,12 @@ async def call_ai_chat(
         # التزام تام بالموجّه المستلم دون أي زيادة أو فرض لقوالب أو عناوين عامة إطلاقاً
         effective_system = base_prompt
 
-    request_timeout = 300.0 if provider in ("ollama", "lmstudio") else 180.0
-    async with httpx.AsyncClient(timeout=request_timeout) as client:
+    if provider in ("ollama", "lmstudio"):
+        client_timeout = httpx.Timeout(300.0, connect=30.0)
+    else:
+        client_timeout = httpx.Timeout(120.0, connect=15.0, read=120.0, write=30.0)
+
+    async with httpx.AsyncClient(timeout=client_timeout) as client:
         # ضبط سقف رموز التوليد المخرجة بحسب حدود كل مزود لتفادي أخطاء 400
         provider_output_limits = {
             "openai": 16384,
@@ -365,9 +369,10 @@ async def call_ai_chat(
         elif provider == "openrouter":
             # خريطة تحويل الأسماء القديمة/الملغاة تلقائياً لتفادي أخطاء 404
             OPENROUTER_MODEL_MAP = {
-                "anthropic/claude-3.5-sonnet": "anthropic/claude-sonnet-4.5",
-                "anthropic/claude-3-5-sonnet-20241022": "anthropic/claude-sonnet-4.5",
-                "anthropic/claude-3-sonnet": "anthropic/claude-sonnet-4",
+                "anthropic/claude-sonnet-4.5": "anthropic/claude-3.5-sonnet",
+                "anthropic/claude-sonnet-4": "anthropic/claude-3.5-sonnet",
+                "anthropic/claude-3-5-sonnet-20241022": "anthropic/claude-3.5-sonnet",
+                "anthropic/claude-3-sonnet": "anthropic/claude-3.5-sonnet",
                 "google/gemini-pro-1.5": "google/gemini-2.0-flash-001",
             }
             effective_model = OPENROUTER_MODEL_MAP.get(model, model) or "deepseek/deepseek-r1"
@@ -655,15 +660,18 @@ async def reformulate_fiqh_query(
     )
 
     try:
-        res = await call_ai_chat(
-            provider=provider,
-            api_key=api_key,
-            model=model,
-            messages=[{"role": "user", "content": prompt_content}],
-            system_prompt="أنت خبير محرك بحث التراث الإسلامي وصياغة الاستعلامات الفقهية الدقيقة.",
-            temperature=0.2,
-            max_tokens=150,
-            base_url=base_url
+        res = await asyncio.wait_for(
+            call_ai_chat(
+                provider=provider,
+                api_key=api_key,
+                model=model,
+                messages=[{"role": "user", "content": prompt_content}],
+                system_prompt="أنت خبير محرك بحث التراث الإسلامي وصياغة الاستعلامات الفقهية الدقيقة.",
+                temperature=0.2,
+                max_tokens=150,
+                base_url=base_url
+            ),
+            timeout=10.0
         )
         reformulated = res.get("content", "").strip()
         reformulated = re.sub(r"[\"\'\`]", "", reformulated).strip()
@@ -673,7 +681,7 @@ async def reformulate_fiqh_query(
             if len(clean_q) > 3:
                 return clean_q
     except Exception as e:
-        print(f"Error in reformulate_fiqh_query: {e}")
+        print(f"Notice: Query reformulation skipped/timed out: {e}")
 
     return user_query
 
@@ -725,15 +733,18 @@ async def plan_supplementary_searches(
     )
 
     try:
-        res = await call_ai_chat(
-            provider=provider,
-            api_key=api_key,
-            model=model,
-            messages=[{"role": "user", "content": eval_prompt}],
-            system_prompt="أنت مدقق علمي خبير، تخرج إجاباتك بتنسيق JSON حصراً.",
-            temperature=0.2,
-            max_tokens=800,
-            structured_format='{"needs_more": false, "reason": "...", "queries": []}'
+        res = await asyncio.wait_for(
+            call_ai_chat(
+                provider=provider,
+                api_key=api_key,
+                model=model,
+                messages=[{"role": "user", "content": eval_prompt}],
+                system_prompt="أنت مدقق علمي خبير، تخرج إجاباتك بتنسيق JSON حصراً.",
+                temperature=0.2,
+                max_tokens=800,
+                structured_format='{"needs_more": false, "reason": "...", "queries": []}'
+            ),
+            timeout=12.0
         )
         content = res.get("content", "").strip()
         if "```" in content:
@@ -753,7 +764,7 @@ async def plan_supplementary_searches(
                     "queries": [q.strip() for q in queries if isinstance(q, str) and q.strip()]
                 }
     except Exception as e:
-        print(f"Error in plan_supplementary_searches: {e}")
+        print(f"Notice: Supplementary research skipped/timed out: {e}")
 
     return {"needs_more": False, "reason": "النصوص الحالية كافية", "queries": []}
 

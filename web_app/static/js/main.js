@@ -4266,7 +4266,7 @@ let pipelineGapFillEnabled = true;
 
 // النماذج المقترحة الأساسية المثبتة في صدارة القائمة
 const PRIMARY_RECOMMENDED_MODELS = [
-    { id: "anthropic/claude-sonnet-4.5", name: "Claude Sonnet 4.5", comp: "anthropic", context: "200k", desc: "الأقوى في التحقيق والتأصيل وصياغة العزو والمقارنات", badge: "موصى به" },
+    { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", comp: "anthropic", context: "200k", desc: "الأقوى في التحقيق والتأصيل وصياغة العزو والمقارنات", badge: "موصى به" },
     { id: "deepseek/deepseek-r1", name: "DeepSeek R1 (Reasoning)", comp: "deepseek", context: "128k", desc: "نموذج التفكير المنطقي الفائق واستخراج العلل والاستدلال", badge: "تفكير واستدلال" },
     { id: "openai/gpt-4o", name: "GPT-4o Omnimodel", comp: "openai", context: "128k", desc: "نموذج شامل ودقيق في الربط والاستخلاص وتنسيق المخرجات", badge: "شامل متقدم" },
     { id: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash", comp: "google", context: "1M+", desc: "سياق عملاق يتسع لمئات صفحات كتب التراث دفعة واحدة", badge: "سياق ضخم" },
@@ -4349,11 +4349,11 @@ async function initAssistants() {
         const stored = localStorage.getItem(ASSISTANTS_STORAGE_KEY);
         if (stored) {
             assistantsList = JSON.parse(stored);
-            // ترقية وتحديث المعرفات القديمة لـ Claude 3.5 Sonnet إلى المعرف النشط
+            // ترقية وتحديث المعرفات غير الصالحة إلى المعرف النشط
             let migrated = false;
             assistantsList.forEach(a => {
-                if (a.model === "anthropic/claude-3.5-sonnet") {
-                    a.model = "anthropic/claude-sonnet-4.5";
+                if (a.model === "anthropic/claude-sonnet-4.5" || a.model === "anthropic/claude-sonnet-4") {
+                    a.model = "anthropic/claude-3.5-sonnet";
                     migrated = true;
                 }
                 if (!a.collection_name) {

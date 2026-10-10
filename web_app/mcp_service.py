@@ -89,6 +89,9 @@ def parse_betaka_metadata(betaka_text: str) -> Dict[str, Any]:
     lines = [line.strip() for line in clean_text.split('\n') if line.strip()]
     
     meta = {
+        "title": "",
+        "author": "",
+        "death_hijri": None,
         "publisher": "",
         "edition": "",
         "investigator": "",
@@ -105,8 +108,17 @@ def parse_betaka_metadata(betaka_text: str) -> Dict[str, Any]:
         m = re.match(r"^([^:]{2,30})\s*:\s*(.*)$", line)
         if m:
             k, v = m.group(1).strip(), m.group(2).strip()
+            # 0. اسم الكتاب والمؤلف وتاريخ الوفاة
+            if any(w in k for w in ["الكتاب", "اسم الكتاب"]) and not meta["title"]:
+                meta["title"] = v
+            elif any(w in k for w in ["المؤلف", "المصنف"]) and not meta["author"]:
+                death_m = re.search(r'\(?\s*ت\s*(\d+|[٠-٩]+)\s*هـ?\s*\)?', v)
+                if death_m:
+                    meta["death_hijri"] = death_m.group(1)
+                clean_auth = re.sub(r'\(.*?\)', '', v).strip()
+                meta["author"] = clean_auth or v
             # 1. الطبعة وسنة الطبع (نفحصها قبل الناشر لتفادي التداخل مع طبع/المطبعة)
-            if any(w in k for w in ["الطبعة", "طبعة", "سنة الطبع", "عام النشر", "تاريخ النشر"]):
+            elif any(w in k for w in ["الطبعة", "طبعة", "سنة الطبع", "عام النشر", "تاريخ النشر"]):
                 if not meta["edition"]:
                     meta["edition"] = v
             # 2. دار النشر والمطبعة
@@ -135,9 +147,24 @@ def format_scholarly_citation(
     """بناء عزو توثيقي أكاديمي فائق الدقة متوافق مع المنهجية العلمية المعتمدة"""
     cit_parts = []
     
-    author_str = f" لـ {author}" if author else ""
-    death_str = f" (ت {death_hijri}هـ)" if death_hijri else ""
-    cit_parts.append(f"«{title}»{author_str}{death_str}")
+    eff_title = (title or "").strip()
+    eff_author = (author or "").strip()
+    eff_death = death_hijri
+    
+    if meta:
+        if not eff_title or eff_title in ("«»", "كتاب من الشاملة", "كتاب رقم 0"):
+            eff_title = meta.get("title") or eff_title
+        if not eff_author:
+            eff_author = meta.get("author") or eff_author
+        if not eff_death:
+            eff_death = meta.get("death_hijri") or eff_death
+
+    if not eff_title:
+        eff_title = "كتاب من المكتبة الشاملة"
+
+    author_str = f" لـ {eff_author}" if eff_author else ""
+    death_str = f" (ت {eff_death}هـ)" if eff_death else ""
+    cit_parts.append(f"«{eff_title}»{author_str}{death_str}")
     
     if meta:
         if meta.get("investigator"):
@@ -268,12 +295,20 @@ def search_shamela_text(
                 b_text = get_book_betaka(int(b_id))
             b_meta = parse_betaka_metadata(b_text) if b_text else {}
 
+            title = r.get("title_ar") or r.get("title") or b_meta.get("title") or (f"كتاب رقم {b_id}" if b_id else "كتاب من الشاملة")
+            if not title or title.startswith("كتاب رقم 0") or title == "كتاب رقم 0":
+                title = b_meta.get("title") or "كتاب من الشاملة"
+            author = r.get("author_name") or r.get("author") or b_meta.get("author") or ""
+            death = r.get("death_hijri") or r.get("author_death_hijri") or b_meta.get("death_hijri")
+            part = r.get("part") or ""
+            page = r.get("page_num") or r.get("page") or ""
+
             citation = format_scholarly_citation(
-                title=r.get("title_ar", ""),
-                author=r.get("author_name", ""),
-                death_hijri=r.get("death_hijri"),
-                part=r.get("part"),
-                page_num=r.get("page_num"),
+                title=title,
+                author=author,
+                death_hijri=death,
+                part=part,
+                page_num=page,
                 meta=b_meta
             )
 
@@ -281,9 +316,9 @@ def search_shamela_text(
             snippet_content = body_content
 
             # تطبيق توسيع السياق بربط الصفحة بالسياق المحيط لعدم بتر المسألة
-            if window_expansion and b_id and r.get("page_num"):
+            if window_expansion and b_id and (page or r.get("page_num")):
                 try:
-                    p_ctx = get_page_context(int(b_id), r.get("page_num"), r.get("part"), include_context=True)
+                    p_ctx = get_page_context(int(b_id), int(page) if str(page).isdigit() else r.get("page_num"), part or r.get("part"), include_context=True)
                     if p_ctx and not p_ctx.get("error"):
                         expanded_parts = []
                         if p_ctx.get("previous_page") and p_ctx["previous_page"].get("body"):
@@ -293,7 +328,7 @@ def search_shamela_text(
                         if p_ctx.get("page") and p_ctx["page"].get("body"):
                             cur_text = p_ctx["page"]["body"].strip()
                             if cur_text:
-                                expanded_parts.append(f"[نص المسألة ص {r.get('page_num')}]:\n{cur_text}")
+                                expanded_parts.append(f"[نص المسألة ص {page or r.get('page_num')}]:\n{cur_text}")
                         if p_ctx.get("next_page") and p_ctx["next_page"].get("body"):
                             next_text = p_ctx["next_page"]["body"].strip()
                             if next_text:
@@ -305,13 +340,13 @@ def search_shamela_text(
                     pass
 
             results.append({
-                "book_id": b_id,
-                "title": r.get("title_ar"),
-                "category": r.get("category_name_ar"),
-                "author": r.get("author_name"),
-                "author_death_hijri": r.get("death_hijri"),
-                "part": r.get("part"),
-                "page_num": r.get("page_num"),
+                "book_id": b_id or 0,
+                "title": title,
+                "category": r.get("category_name_ar") or r.get("category") or "",
+                "author": author,
+                "author_death_hijri": death,
+                "part": part,
+                "page_num": page,
                 "publisher": b_meta.get("publisher", ""),
                 "edition": b_meta.get("edition", ""),
                 "investigator": b_meta.get("investigator", ""),
