@@ -43,8 +43,7 @@ BADR_TCH_COLLECTION_NAME = "badr_tch_corpus"
 BADR_ALL_TSH_COLLECTION_NAME = "badr_all_tsh_corpus"
 BADR_MODEL_ID = "somayaeltanbouly/Badr_embedding_v0"
 _raw_token = (os.environ.get("BADR_HF_TOKEN") or os.environ.get("HF_TOKEN") or "").strip()
-_DEFAULT_HF_TOKEN = "hf_JATiNFAArq" + "OceSDpnShyqmhYoURdyKLmpD"
-BADR_HF_TOKEN = _raw_token if (_raw_token and not _raw_token.startswith("hf_...")) else _DEFAULT_HF_TOKEN
+BADR_HF_TOKEN = _raw_token if (_raw_token and not _raw_token.startswith("hf_...")) else None
 RERANKER_MODEL_ID = "BAAI/bge-reranker-v2-m3"
 
 # Global state
