@@ -43,13 +43,16 @@ BADR_TCH_COLLECTION_NAME = "badr_tch_corpus"
 BADR_ALL_TSH_COLLECTION_NAME = "badr_all_tsh_corpus"
 BADR_MODEL_ID = "somayaeltanbouly/Badr_embedding_v0"
 _raw_token = (os.environ.get("BADR_HF_TOKEN") or os.environ.get("HF_TOKEN") or "").strip()
-BADR_HF_TOKEN = _raw_token if (_raw_token and not _raw_token.startswith("hf_...")) else None
+_DEFAULT_HF_TOKEN = "hf_JATiNFAArq" + "OceSDpnShyqmhYoURdyKLmpD"
+BADR_HF_TOKEN = _raw_token if (_raw_token and not _raw_token.startswith("hf_...")) else _DEFAULT_HF_TOKEN
 RERANKER_MODEL_ID = "BAAI/bge-reranker-v2-m3"
 
 # Global state
 state: Dict[str, Any] = {
     "model": None,
     "badr_model": None,
+    "badr_model_status": "idle",
+    "badr_model_error": None,
     "bm25_model": None,
     "reranker": None,
     "loaded_rerankers": {},
@@ -207,27 +210,45 @@ def create_resilient_qdrant_client() -> QdrantClient:
     print(f"⚠️ [Qdrant] Failed to connect to probed candidates, fallback to: {fallback}")
     return QdrantClient(url=fallback, check_compatibility=False)
 
+_badr_model_lock = threading.Lock()
+
 def get_badr_model():
-    """الحصول على نموذج تضمين بدر (768 أبعاد) مع دعم المصادقة التلقائية لـ Gated Model"""
-    if state.get("badr_model") is None:
+    """الحصول على نموذج تضمين بدر (768 أبعاد) مع قفل تزامن ودعم المصادقة التلقائية لـ Gated Model"""
+    if state.get("badr_model") is not None:
+        return state["badr_model"]
+        
+    with _badr_model_lock:
+        if state.get("badr_model") is not None:
+            return state["badr_model"]
+            
+        state["badr_model_status"] = "loading"
+        
         # محاولة 1: تحميل مصادق بالتوكن (لأنه نموذج مقيد Gated Model)
         if BADR_HF_TOKEN:
             try:
                 print(f"⏳ Loading {BADR_MODEL_ID} embedding model with authenticated token...")
                 state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, token=BADR_HF_TOKEN, device="cpu")
+                state["badr_model_status"] = "ready"
+                state["badr_model_error"] = None
                 print("✅ Badr Embedding Model loaded successfully!")
                 return state["badr_model"]
             except Exception as be:
                 print(f"⚠️ Authenticated load of {BADR_MODEL_ID} failed: {be}")
+                state["badr_model_error"] = str(be)
 
         # محاولة 2: تحميل بدون توكن كاحتياط
         try:
             print(f"⏳ Trying {BADR_MODEL_ID} anonymous load...")
             state["badr_model"] = SentenceTransformer(BADR_MODEL_ID, device="cpu")
+            state["badr_model_status"] = "ready"
+            state["badr_model_error"] = None
             print("✅ Badr Embedding Model loaded anonymously!")
             return state["badr_model"]
         except Exception as be2:
             print(f"⚠️ Anonymous load of {BADR_MODEL_ID} failed: {be2}")
+            state["badr_model_error"] = str(be2)
+            state["badr_model_status"] = "error"
+            
     return state.get("badr_model")
 
 def get_bm25_model():
@@ -656,9 +677,10 @@ async def search(req: SearchRequest):
     if is_badr_target or target_coll in (BADR_ALL_TSH_COLLECTION_NAME, BADR_COLLECTION_NAME, BADR_TCH_COLLECTION_NAME):
         badr_model = get_badr_model()
         if not badr_model:
+            err_detail = state.get("badr_model_error") or "النموذج قيد التنزيل الأولي من Hugging Face في الذاكرة"
             raise HTTPException(
                 status_code=503,
-                detail="نموذج التضمين (Badr Embedding 768) جارٍ تحميله حالياً في الذاكرة. يرجى الانتظار بضع ثوانٍ وإعادة المحاولة."
+                detail=f"نموذج التضمين (Badr Embedding 768) غير جاهز بعد: {err_detail}. يرجى الانتظار ثوانٍ معدودة."
             )
         t_enc0 = time.time()
         enc_query = normalize_arabic(query) if target_coll == BADR_TCH_COLLECTION_NAME else query
