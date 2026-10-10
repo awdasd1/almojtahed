@@ -311,7 +311,17 @@ app.add_middleware(
 @app.get("/health")
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "app": "shamela"}
+    return {
+        "status": "ok",
+        "app": "shamela",
+        "version": "v4.2-badr768",
+        "badr_model_loaded": state.get("badr_model") is not None,
+        "badr_model_status": state.get("badr_model_status", "unknown"),
+        "badr_model_error": state.get("badr_model_error"),
+        "hf_token_present": bool(BADR_HF_TOKEN),
+        "hf_token_prefix": (BADR_HF_TOKEN[:7] + "...") if BADR_HF_TOKEN else None,
+        "device": state.get("device", "cpu")
+    }
 
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
