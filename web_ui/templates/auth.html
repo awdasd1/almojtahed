@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | المجتهد</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Noto+Kufi+Arabic:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/claude_theme.css?v=1792700000">
+    <style>
+        :root {
+            --auth-bg: #0f1117;
+            --auth-card: #181b24;
+            --auth-border: rgba(255, 255, 255, 0.08);
+            --auth-accent: #c27803;
+            --auth-accent-hover: #d98204;
+            --auth-text: #e2e8f0;
+            --auth-muted: #94a3b8;
+        }
+
+        [data-theme="light"] {
+            --auth-bg: #f8fafc;
+            --auth-card: #ffffff;
+            --auth-border: rgba(0, 0, 0, 0.08);
+            --auth-accent: #b45309;
+            --auth-accent-hover: #92400e;
+            --auth-text: #1e293b;
+            --auth-muted: #64748b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--auth-bg);
+            color: var(--auth-text);
+            font-family: 'Noto Kufi Arabic', system-ui, -apple-system, sans-serif;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* خلفية جمالية تراثية ناعمة */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: radial-gradient(circle at 50% 20%, rgba(194, 120, 3, 0.08) 0%, transparent 60%),
+                              radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .auth-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 460px;
+            padding: 24px;
+        }
+
+        .auth-card {
+            background: var(--auth-card);
+            border: 1px solid var(--auth-border);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            padding: 36px 32px;
+            backdrop-filter: blur(12px);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .auth-logo {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            background: rgba(194, 120, 3, 0.12);
+            border: 1px solid rgba(194, 120, 3, 0.3);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 8px 20px rgba(194, 120, 3, 0.15);
+        }
+
+        .auth-title {
+            margin: 0 0 6px;
+            font-size: 22px;
+            font-weight: 800;
+            font-family: 'Amiri', serif;
+            color: var(--auth-text);
+        }
+
+        .auth-subtitle {
+            margin: 0;
+            font-size: 13px;
+            color: var(--auth-muted);
+            line-height: 1.5;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: right;
+        }
+
+        .form-label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--auth-text);
+        }
+
+        .form-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--auth-border);
+            background: rgba(0, 0, 0, 0.08);
+            color: var(--auth-text);
+            font-size: 13.5px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--auth-accent);
+            box-shadow: 0 0 0 3px rgba(194, 120, 3, 0.2);
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .auth-btn {
+            margin-top: 8px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, var(--auth-accent), var(--auth-accent-hover));
+            color: #ffffff;
+            font-size: 14.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(194, 120, 3, 0.3);
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(194, 120, 3, 0.4);
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-alert {
+            display: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            line-height: 1.4;
+            margin-bottom: 14px;
+        }
+
+        .auth-alert.error {
+            display: block;
+            background: rgba(220, 38, 38, 0.12);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            color: #ef4444;
+        }
+
+        .auth-alert.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .auth-footer-notice {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 11.5px;
+            color: var(--auth-muted);
+            border-top: 1px solid var(--auth-border);
+            padding-top: 16px;
+        }
+
+        .theme-switcher-corner {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--auth-card);
+            border: 1px solid var(--auth-border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: var(--auth-muted);
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-pattern"></div>
+
+    <button type="button" class="theme-switcher-corner" onclick="toggleAuthTheme()">
+        <span id="themeIcon">☀️</span>
+        <span id="themeText">تبديل الثيم</span>
+    </button>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            
+            <div class="auth-header">
+                <div class="auth-logo" id="authLogo">🌟</div>
+                <h1 class="auth-title" id="authTitle">منظومة المجتهد</h1>
+                <p class="auth-subtitle" id="authSubtitle">المكتبة الشاملة المضمنة والمكممة</p>
+            </div>
+
+            <div id="authAlert" class="auth-alert"></div>
+
+            <!-- نموذج تأسيس الحساب لأول مرة (Setup) -->
+            <form id="setupForm" class="auth-form" style="display: none;" onsubmit="handleSetupSubmit(event)">
+                <div style="background: rgba(194, 120, 3, 0.08); border: 1px dashed rgba(194, 120, 3, 0.3); border-radius: 8px; padding: 10px; font-size: 12px; color: var(--auth-muted); text-align: center;">
+                    💡 لم يتم تعيين حساب مدير للمنظومة بعد. يرجى إنشاء اسم المستخدم وكلمة المرور لتأمين خادمك.
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="setupUsername">👤 اسم المستخدم المشرف:</label>
+                    <input type="text" id="setupUsername" class="form-input" placeholder="مثال: admin" required autofocus autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="setupPassword">🔑 كلمة المرور:</label>
+                    <input type="password" id="setupPassword" class="form-input" placeholder="كلمة مرور قوية ومحفوظة" required autocomplete="new-password">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="setupConfirmPassword">🔒 تأكيد كلمة المرور:</label>
+                    <input type="password" id="setupConfirmPassword" class="form-input" placeholder="أعد إدخال كلمة المرور" required autocomplete="new-password">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="setupOpenRouterKey">🌐 مفتاح OpenRouter (اختياري للذكاء الاصطناعي):</label>
+                    <input type="password" id="setupOpenRouterKey" class="form-input" placeholder="sk-or-v1-..." autocomplete="off">
+                </div>
+
+                <button type="submit" id="btnSetupSubmit" class="auth-btn">
+                    <span>🚀 تأسيس الحساب والدخول للمنظومة</span>
+                </button>
+            </form>
+
+            <!-- نموذج تسجيل الدخول المعتاد (Login) -->
+            <form id="loginForm" class="auth-form" style="display: none;" onsubmit="handleLoginSubmit(event)">
+                <div class="form-group">
+                    <label class="form-label" for="loginUsername">👤 اسم المستخدم:</label>
+                    <input type="text" id="loginUsername" class="form-input" placeholder="اسم المستخدم" required autofocus autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="loginPassword">🔑 كلمة المرور:</label>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="كلمة المرور" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" id="btnLoginSubmit" class="auth-btn">
+                    <span>🔑 تسجيل الدخول</span>
+                </button>
+            </form>
+
+            <div class="auth-footer-notice">
+                <span>🛡️ الجلسة صالحة لمدة <strong>3 أيام</strong> من آخر تسجيل، أو حتى مسح كاش المتصفح.</span>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let isConfigured = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuthStatus();
+            initTheme();
+        });
+
+        async function checkAuthStatus() {
+            try {
+                const res = await fetch('/api/auth/status');
+                if (res.ok) {
+                    const data = await res.json();
+                    isConfigured = !!data.is_configured;
+                    
+                    if (data.is_authenticated) {
+                        // مسجل مسبقاً ولديه جلسة صالحة -> الانتقال فوراً للتطبيق
+                        window.location.href = '/';
+                        return;
+                    }
+
+                    if (!isConfigured) {
+                        // لأول مرة -> إظهار واجهة التأسيس
+                        document.getElementById('authTitle').textContent = 'تأسيس حساب المشرف لأول مرة';
+                        document.getElementById('authSubtitle').textContent = 'قم بإنشاء بيانات الاعتماد لتأمين المنظومة وحفظها في البيئة';
+                        document.getElementById('setupForm').style.display = 'flex';
+                        document.getElementById('loginForm').style.display = 'none';
+                    } else {
+                        // تم التأسيس مسبقاً -> واجهة الدخول
+                        document.getElementById('authTitle').textContent = 'تسجيل الدخول إلى المجتهد';
+                        document.getElementById('authSubtitle').textContent = 'أدخل اسم المستخدم وكلمة المرور للمتابعة';
+                        document.getElementById('loginForm').style.display = 'flex';
+                        document.getElementById('setupForm').style.display = 'none';
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to check auth status:', err);
+                showAlert('تعذر التحقق من حالة الاتصال بالخادم', 'error');
+            }
+        }
+
+        async function handleSetupSubmit(e) {
+            e.preventDefault();
+            const username = document.getElementById('setupUsername').value.trim();
+            const password = document.getElementById('setupPassword').value;
+            const confirmPassword = document.getElementById('setupConfirmPassword').value;
+            const openrouterKey = document.getElementById('setupOpenRouterKey').value.trim();
+            const btn = document.getElementById('btnSetupSubmit');
+
+            if (!username || !password) {
+                showAlert('يرجى ملء اسم المستخدم وكلمة المرور', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAlert('كلمتا المرور غير متطابقتين!', 'error');
+                return;
+            }
+
+            if (password.length < 4) {
+                showAlert('يجب أن تكون كلمة المرور 4 أحرف أو أرقام على الأقل', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>جارٍ حفظ الإعدادات وتأمين المنظومة... ⏳</span>';
+
+            try {
+                const res = await fetch('/api/auth/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        openrouter_key: openrouterKey
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    showAlert('تم تأسيس الحساب بنجاح! جاري الدخول...', 'success');
+                    if (data.token) {
+                        localStorage.setItem('almujtahed_auth_token', data.token);
+                    }
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 800);
+                } else {
+                    showAlert(data.detail || data.message || 'فشل تأسيس الحساب', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🚀 تأسيس الحساب والدخول للمنظومة</span>';
+                }
+            } catch (err) {
+                showAlert('خطأ في الاتصال بالخادم: ' + err.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<span>🚀 تأسيس الحساب والدخول للمنظومة</span>';
+            }
+        }
+
+        async function handleLoginSubmit(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('btnLoginSubmit');
+
+            if (!username || !password) {
+                showAlert('يرجى إدخال اسم المستخدم وكلمة المرور', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>جارٍ التحقق من بيانات الدخول... ⏳</span>';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    showAlert('تم التحقق بنجاح! جاري نقلك للمنظومة...', 'success');
+                    if (data.token) {
+                        localStorage.setItem('almujtahed_auth_token', data.token);
+                    }
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 500);
+                } else {
+                    showAlert(data.detail || data.message || 'اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🔑 تسجيل الدخول</span>';
+                }
+            } catch (err) {
+                showAlert('خطأ في الاتصال: ' + err.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔑 تسجيل الدخول</span>';
+            }
+        }
+
+        function showAlert(msg, type) {
+            const el = document.getElementById('authAlert');
+            el.textContent = msg;
+            el.className = 'auth-alert ' + type;
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem('almojtahed_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+            updateThemeIcon(saved);
+        }
+
+        function toggleAuthTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('almojtahed_theme', next);
+            updateThemeIcon(next);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('themeIcon');
+            const txt = document.getElementById('themeText');
+            if (icon && txt) {
+                if (theme === 'dark') {
+                    icon.textContent = '☀️';
+                    txt.textContent = 'الوضع الفاتح';
+                } else {
+                    icon.textContent = '🌙';
+                    txt.textContent = 'الوضع الداكن';
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

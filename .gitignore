@@ -1,90 +1,44 @@
-# ==========================================
-# Shamela Snapshot Git Ignore Configuration
-# Designed for lightweight GitHub & Coolify
-# ==========================================
+# ==============================================================================
+# منظومة المجتهد - استثناء الملفات الضخمة والبيئة من GitHub (.gitignore)
+# للمحافظة على نسخة برمجية فائقة الخفة (~15-20 MB) تُرفع فورياً
+# ==============================================================================
 
-# Virtual Environments
-.venv/
-venv/
-env/
-ENV/
-
-# Python Cache & Artifacts
+# بيئة بايثون والملفات المؤقتة
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
+.venv/
+env/
+venv/
 *.egg-info/
-.installed.cfg
-*.egg
+dist/
+build/
 
-# Giant Snapshot Files & Archives (28GB+ & 33GB+)
-*.snapshot
-*.tar.gz
-*.tar
-*.zip
-*.7z
-*.rar
-badr.snapshot
-shamela_corpus-*.snapshot
-
-# Databases
-*.db
-*.sqlite
-*.sqlite3
-shamela.db
-!shamela_index.db
-
-# Qdrant Local Engine Storage & Data
-qdrant_service/
-qdrant_db/
-qdrant_bin/
-
-# Sensitive API Keys & User Secrets
-*keys.json
-api_keys.json
-saved_keys.json
+# ملفات الأسرار والبيئة المحلية (لا تُرفع لمنع تسريب المفاتيح)
 .env
-.env.*
-!.env.example
-
-# Local Model Weights & Data Folders (Exclude giant raw texts, keep lightweight _meta parquet for MCP)
-models/
-shamela4_data/*
-!shamela4_data/_meta/
-shamela4_data/_meta/*.jsonl
-
-# OS & Editor Files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Logs
+.env.local
 *.log
-uvicorn.log
 
-# Temporary and duplicate files
-*نسخة من*
+# الملفات وقواعد البيانات الضخمة (تُسحب آلياً عبر Coolify عند التنصيب)
+qdrant_service/storage/
+qdrant_service/snapshots/
+qdrant_service/qdrant
+qdrant_service/*.log
+qdrant_store/
+*.snapshot
+shamela4_data/
+models/
+inference_models/
+*.gguf
+*.bin
+*.safetensors
+*.tar.gz
+*.zip
+
+# ملفات النظام والمجلدات المؤقتة
+.DS_Store
+Thumbs.db
+tmp/
 .tempmediaStorage/
-scratch/
+

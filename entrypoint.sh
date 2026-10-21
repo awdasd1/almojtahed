@@ -1,73 +1,27 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# ==============================================================================
+# منظومة المجتهد - سكربت بدء التشغيل والتهيئة السحابية للحاوية
+# ==============================================================================
+
 set -e
 
 echo "=========================================================="
-echo "📚 Starting Shamela AI Web Application (Coolify / Docker)"
+echo "🌟 بدء تشغيل منصة المجتهد على Coolify / Docker"
 echo "=========================================================="
 
-if [ -n "$HF_TOKEN" ]; then
-    export BADR_HF_TOKEN="${BADR_HF_TOKEN:-$HF_TOKEN}"
+# 1. تهيئة ملف البيئة .env إذا لم يكن موجوداً
+if [ ! -f /app/.env ]; then
+    echo "📄 نسخ .env.example إلى .env..."
+    cp /app/.env.example /app/.env
 fi
 
-# 1. Automatic Database Asset Download from Hugging Face if configured
-if [ -n "$HF_DATASET_REPO" ]; then
-    DATA_TARGET_DIR="${DATA_DIR:-/app/data}"
-    INDEX_DB_TARGET="${SHAMELA_INDEX_DB:-/app/shamela_index.db}"
+# 2. فحص وتهيئة بيانات Hugging Face واللقطة في خلفية التشغيل إذا لم تكن موجودة
+echo "🔄 فحص جاهزية مخازن الشاملة والمتجهات والموديلات من Hugging Face..."
+python3 /app/init_coolify_data.py || {
+    echo "⚠️ تم تسجيل ملاحظة أثناء جلب البيانات، يستمر الخادم في الإقلاع..."
+}
 
-    if [ ! -f "$INDEX_DB_TARGET" ] && [ ! -d "$DATA_TARGET_DIR/collections" ]; then
-        echo "🌐 HF_DATASET_REPO detected: $HF_DATASET_REPO"
-        echo "📥 Fetching database assets from Hugging Face..."
-        mkdir -p "$DATA_TARGET_DIR"
-
-        HF_CMD="huggingface-cli download $HF_DATASET_REPO --local-dir $DATA_TARGET_DIR"
-        if [ -n "$HF_TOKEN" ]; then
-            HF_CMD="$HF_CMD --token $HF_TOKEN"
-        fi
-
-        echo "🚀 Running: $HF_CMD"
-        eval "$HF_CMD" || echo "⚠️ Warning: Failed to download from Hugging Face, continuing with existing files..."
-        
-        # If an index.db was downloaded into the data folder, link or copy it
-        if [ -f "$DATA_TARGET_DIR/shamela_index.db" ] && [ ! -f "$INDEX_DB_TARGET" ]; then
-            cp "$DATA_TARGET_DIR/shamela_index.db" "$INDEX_DB_TARGET"
-        fi
-        echo "✅ Asset check complete."
-    else
-        echo "✅ Database assets already present in persistent volume. Skipping download."
-    fi
-fi
-
-# Ensure bundled shamela_index.db is placed in target location if target is missing
-INDEX_TARGET="${SHAMELA_INDEX_DB:-/app/shamela_index.db}"
-if [ ! -f "$INDEX_TARGET" ] && [ -f "/app/shamela_index.db" ]; then
-    mkdir -p "$(dirname "$INDEX_TARGET")"
-    cp "/app/shamela_index.db" "$INDEX_TARGET"
-    echo "✅ Seeded shamela_index.db into $INDEX_TARGET"
-fi
-
-# 2. Wait for Qdrant service if QDRANT_URL is specified (e.g. in docker-compose)
-if [ -n "$QDRANT_URL" ]; then
-    echo "🔍 Checking Qdrant connection at $QDRANT_URL..."
-    MAX_RETRIES=20
-    RETRY_COUNT=0
-    until curl -s "$QDRANT_URL/readyz" >/dev/null 2>&1 || [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-        echo "⏳ Waiting for Qdrant to be ready ($((RETRY_COUNT+1))/$MAX_RETRIES)..."
-        sleep 2
-        RETRY_COUNT=$((RETRY_COUNT+1))
-    done
-    if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-        echo "⚠️ Note: Qdrant readyz probe timed out, attempting to continue anyway..."
-    else
-        echo "✅ Qdrant service is online!"
-    fi
-fi
-
-# 3. Launch Claude Desktop Web Server in background on port 5173
-if [ -f "mcp web/server.py" ]; then
-    echo "💬 Starting Claude Desktop Web (User End) on port 5173..."
-    python3 "mcp web/server.py" > /tmp/claude_web.log 2>&1 &
-fi
-
-APP_PORT="${PORT:-8000}"
-echo "🚀 Launching FastAPI Uvicorn Server on 0.0.0.0:$APP_PORT..."
-exec uvicorn web_app.app:app --host 0.0.0.0 --port "$APP_PORT" --workers "${WEB_CONCURRENCY:-1}"
+# 3. إطلاق خادم التطبيق
+echo "🚀 تشغيل خادم المجتهد (FastAPI)..."
+cd /app/web_ui
+exec python3 server.py
