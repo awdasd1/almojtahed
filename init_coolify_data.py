@@ -39,11 +39,12 @@ def print_banner(msg):
 
 def wait_for_qdrant(timeout=60):
     """الانتظار حتى يبدأ خادم Qdrant بالاستجابة مع فحص المضيفين المحتملين تلقائياً"""
+    global QDRANT_HOST
     candidate_hosts = [
         QDRANT_HOST,
-        "qdrant",
         "localhost",
         "127.0.0.1",
+        "qdrant",
         "host.docker.internal"
     ]
     seen = set()
@@ -58,13 +59,12 @@ def wait_for_qdrant(timeout=60):
                 client = QdrantClient(host=h, port=QDRANT_PORT, timeout=3)
                 client.get_collections()
                 print(f"✅ تم الاتصال بمحرك Qdrant بنجاح على المضيف: {h}:{QDRANT_PORT}")
-                global QDRANT_HOST
                 QDRANT_HOST = h
                 return client
             except Exception:
                 pass
         time.sleep(2)
-    print(f"⚠️ تعذر الاتصال بـ Qdrant بعد {timeout} ثانية. تأكد من تشغيل خدمة qdrant في docker-compose.")
+    print(f"⚠️ تعذر الاتصال بـ Qdrant بعد {timeout} ثانية. تأكد من تشغيل خدمة qdrant.")
     return None
 
 def init_qdrant_snapshot(client):

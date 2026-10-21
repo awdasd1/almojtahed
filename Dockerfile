@@ -22,6 +22,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# تثبيت محرك Qdrant الرسمي كخيار تشغيل مدمج فوري
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        Q_ARCH="x86_64-unknown-linux-gnu"; \
+    elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        Q_ARCH="aarch64-unknown-linux-gnu"; \
+    else \
+        Q_ARCH="x86_64-unknown-linux-gnu"; \
+    fi && \
+    mkdir -p /app/qdrant_service && \
+    curl -sL "https://github.com/qdrant/qdrant/releases/download/v1.11.0/qdrant-${Q_ARCH}.tar.gz" | tar -xz -C /app/qdrant_service && \
+    chmod +x /app/qdrant_service/qdrant
+
 # تثبيت اعتماديات بايثون
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
