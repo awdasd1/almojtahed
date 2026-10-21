@@ -16,6 +16,7 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_storage:/qdrant/storage
+      - qdrant_snapshots:/qdrant/snapshots
     environment:
       - QDRANT__SERVICE__ENABLE_CORS=true
       - QDRANT__STORAGE__ON_DISK_PAYLOAD=true
@@ -41,6 +42,7 @@ services:
       - shamela_data:/app/shamela4_data
       - models_data:/app/models
       - app_env:/app/env_persist
+      - qdrant_snapshots:/qdrant/snapshots
     environment:
       - HOST=0.0.0.0
       - PORT=8085
@@ -49,6 +51,8 @@ services:
 
 volumes:
   qdrant_storage:
+    driver: local
+  qdrant_snapshots:
     driver: local
   shamela_data:
     driver: local

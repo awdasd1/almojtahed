@@ -295,7 +295,30 @@ def load_models_and_db():
     """تهيئة نموذج التضمين، قاعدة البيانات، والاتصال بـ Qdrant"""
     print("⏳ [المجتهد] جاري الاتصال بمخزن المتجهات Qdrant...")
     try:
-        qdrant = QdrantClient(host="localhost", port=6333, timeout=15.0)
+        qdrant = None
+        q_candidates = [
+            os.getenv("QDRANT_HOST", "").strip(),
+            "qdrant",
+            "localhost",
+            "127.0.0.1",
+            "host.docker.internal"
+        ]
+        q_port = int(os.getenv("QDRANT_PORT", "6333"))
+        for h in q_candidates:
+            if not h:
+                continue
+            try:
+                temp_client = QdrantClient(host=h, port=q_port, timeout=5.0)
+                temp_client.get_collections()
+                qdrant = temp_client
+                print(f"✅ تم الاتصال بمخزن Qdrant على المضيف: {h}:{q_port}")
+                break
+            except Exception:
+                continue
+
+        if not qdrant:
+            raise ConnectionError(f"تعذر الاتصال بـ Qdrant على أي من المضيفين: {q_candidates}")
+
         colls = [c.name for c in qdrant.get_collections().collections]
         print(f"✅ المجموعات المتوفرة في Qdrant: {colls}")
         
